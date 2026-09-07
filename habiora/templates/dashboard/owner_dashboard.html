@@ -1,0 +1,281 @@
+<!-- templates/dashboard/owner_dashboard.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Tableau de bord - Propriétaire{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+<style>
+    .verification-banner {
+        background: rgba(241, 196, 15, 0.1);
+        border: 1px solid rgba(241, 196, 15, 0.3);
+        border-radius: 12px;
+        padding: 15px 20px;
+        margin-bottom: 25px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    
+    .verification-banner.verified {
+        background: rgba(46, 204, 113, 0.1);
+        border-color: rgba(46, 204, 113, 0.3);
+    }
+    
+    .verification-banner.rejected {
+        background: rgba(231, 76, 60, 0.1);
+        border-color: rgba(231, 76, 60, 0.3);
+    }
+    
+    .verification-banner .status-text {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 14px;
+    }
+    
+    .verification-banner .status-text .icon {
+        font-size: 20px;
+    }
+    
+    .revenue-card .stat-number {
+        color: var(--orange) !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="dashboard-container">
+
+    <!-- ===== EN-TÊTE ===== -->
+    <div class="dashboard-header">
+        <div>
+            <h1>Tableau de bord</h1>
+            <p class="subtitle">Bienvenue, {{ user.first_name|default:user.username }} 👋</p>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'dashboard:owner_property_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Publier une annonce
+            </a>
+            <a href="{% url 'notifications:list' %}" class="btn btn-outline notif-badge">
+                <i class="fas fa-bell"></i> Notifications
+                {% if unread_notifications > 0 %}
+                    <span class="badge-count">{{ unread_notifications }}</span>
+                {% endif %}
+            </a>
+            <a href="{% url 'accounts:profile' %}" class="btn btn-outline">
+                <i class="fas fa-user"></i> Profil
+            </a>
+        </div>
+    </div>
+
+    <!-- ===== BANNIÈRE DE VÉRIFICATION ===== -->
+    {% if verification_status == 'pending' %}
+        <div class="verification-banner">
+            <div class="status-text">
+                <span class="icon">⏳</span>
+                <span>Votre compte est en cours de vérification.</span>
+            </div>
+            <a href="{% url 'dashboard:owner_verification_status' %}" class="btn btn-sm btn-warning">
+                Voir le statut
+            </a>
+        </div>
+    {% elif verification_status == 'approved' %}
+        <div class="verification-banner verified">
+            <div class="status-text">
+                <span class="icon">✅</span>
+                <span>Votre compte est vérifié. Vous pouvez publier des annonces en toute confiance.</span>
+            </div>
+            <a href="{% url 'dashboard:owner_verification_status' %}" class="btn btn-sm btn-success">
+                Voir les détails
+            </a>
+        </div>
+    {% elif verification_status == 'rejected' %}
+        <div class="verification-banner rejected">
+            <div class="status-text">
+                <span class="icon">❌</span>
+                <span>Votre demande de vérification a été rejetée.</span>
+            </div>
+            <a href="{% url 'accounts:verify_owner' %}" class="btn btn-sm btn-danger">
+                Soumettre à nouveau
+            </a>
+        </div>
+    {% else %}
+        <div class="verification-banner">
+            <div class="status-text">
+                <span class="icon">📋</span>
+                <span>Vérifiez votre compte pour publier des annonces en toute confiance.</span>
+            </div>
+            <a href="{% url 'accounts:verify_owner' %}" class="btn btn-sm btn-primary">
+                Vérifier maintenant
+            </a>
+        </div>
+    {% endif %}
+
+    <!-- ===== STATISTIQUES ===== -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-top">
+                <div>
+                    <div class="stat-number">{{ total_properties }}</div>
+                    <div class="stat-label">Mes annonces</div>
+                </div>
+                <div class="stat-icon icon-purple">
+                    <i class="fas fa-home"></i>
+                </div>
+            </div>
+            <div style="font-size: 12px; color: var(--gray); margin-top: 8px;">
+                <span style="color: #2ecc71;">● {{ active_properties }} actives</span>
+                <span style="color: var(--orange); margin-left: 10px;">● {{ pending_properties }} en attente</span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-top">
+                <div>
+                    <div class="stat-number">{{ total_bookings }}</div>
+                    <div class="stat-label">Réservations</div>
+                </div>
+                <div class="stat-icon icon-blue">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+            </div>
+            <div style="font-size: 12px; color: var(--gray); margin-top: 8px;">
+                <span style="color: var(--orange);">● {{ pending_bookings }} en attente</span>
+                <span style="color: #2ecc71; margin-left: 10px;">● {{ confirmed_bookings }} confirmées</span>
+            </div>
+        </div>
+
+        <div class="stat-card revenue-card">
+            <div class="stat-top">
+                <div>
+                    <div class="stat-number">{{ total_revenue|floatformat:0 }} FCFA</div>
+                    <div class="stat-label">Revenus totaux</div>
+                </div>
+                <div class="stat-icon icon-orange">
+                    <i class="fas fa-money-bill-wave"></i>
+                </div>
+            </div>
+            <div style="font-size: 12px; color: var(--gray); margin-top: 8px;">
+                <span>● {{ completed_bookings }} réservations terminées</span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-top">
+                <div>
+                    <div class="stat-number">{{ total_reviews }}</div>
+                    <div class="stat-label">Avis reçus</div>
+                </div>
+                <div class="stat-icon icon-yellow">
+                    <i class="fas fa-star"></i>
+                </div>
+            </div>
+            <div style="font-size: 12px; color: var(--gray); margin-top: 8px;">
+                <span>● Note moyenne : {{ avg_rating|floatformat:1 }}/5</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== ANNONCES RÉCENTES & RÉSERVATIONS ===== -->
+    <div class="content-grid">
+        
+        <!-- Annonces récentes -->
+        <div class="content-card">
+            <div class="card-header">
+                <h4><i class="fas fa-home" style="color: var(--purple-light);"></i> Mes annonces récentes</h4>
+                <a href="{% url 'dashboard:owner_properties' %}" class="view-all">Voir tout →</a>
+            </div>
+            
+            {% if recent_properties %}
+                {% for property in recent_properties %}
+                    <div class="list-item">
+                        <div class="item-info">
+                            <strong>{{ property.title|truncatechars:30 }}</strong>
+                            <span class="item-meta">
+                                <i class="fas fa-map-marker-alt"></i> {{ property.quartier }}
+                                <span style="margin-left: 10px;">
+                                    {% if property.is_approved and property.is_active %}
+                                        <span style="color: #2ecc71;">● Actif</span>
+                                    {% elif property.is_approved and not property.is_active %}
+                                        <span style="color: #e74c3c;">● Inactif</span>
+                                    {% else %}
+                                        <span style="color: var(--orange);">● En attente</span>
+                                    {% endif %}
+                                </span>
+                            </span>
+                        </div>
+                        <a href="{% url 'dashboard:owner_property_edit' property.id %}" class="btn-sm btn-sm-outline">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-home"></i>
+                    <p>Vous n'avez pas encore d'annonces</p>
+                    <a href="{% url 'dashboard:owner_property_create' %}" class="empty-action">Publier une annonce →</a>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Réservations récentes -->
+        <div class="content-card">
+            <div class="card-header">
+                <h4><i class="fas fa-calendar" style="color: var(--orange);"></i> Dernières réservations</h4>
+                <a href="{% url 'dashboard:owner_bookings' %}" class="view-all">Voir tout →</a>
+            </div>
+            
+            {% if recent_bookings %}
+                {% for booking in recent_bookings %}
+                    <div class="list-item">
+                        <div class="item-info">
+                            <strong>{{ booking.property.title|truncatechars:25 }}</strong>
+                            <span class="item-meta">
+                                <i class="fas fa-user"></i> {{ booking.client.username }}
+                                <span style="margin-left: 10px;">
+                                    <i class="fas fa-calendar-alt"></i> {{ booking.start_date|date:"d/m/Y" }}
+                                </span>
+                            </span>
+                        </div>
+                        <span class="item-status status-{{ booking.status }}">
+                            {{ booking.get_status_display }}
+                        </span>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-calendar-plus"></i>
+                    <p>Aucune réservation reçue</p>
+                    <span style="font-size: 13px; color: var(--gray);">Les réservations apparaîtront ici</span>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ===== LIENS RAPIDES ===== -->
+    <div style="margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px;">
+        <a href="{% url 'dashboard:owner_properties' %}" class="btn btn-outline" style="justify-content: center;">
+            <i class="fas fa-list"></i> Gérer les annonces
+        </a>
+        <a href="{% url 'dashboard:owner_bookings' %}" class="btn btn-outline" style="justify-content: center;">
+            <i class="fas fa-calendar-check"></i> Gérer les réservations
+        </a>
+        <a href="{% url 'dashboard:owner_reviews' %}" class="btn btn-outline" style="justify-content: center;">
+            <i class="fas fa-star"></i> Voir les avis
+        </a>
+        <a href="{% url 'dashboard:owner_statistics' %}" class="btn btn-outline" style="justify-content: center;">
+            <i class="fas fa-chart-bar"></i> Statistiques
+        </a>
+        <a href="{% url 'dashboard:owner_confirm_availability' %}" class="btn btn-outline" style="justify-content: center;">
+            <i class="fas fa-check-circle"></i> Confirmer disponibilité
+        </a>
+    </div>
+
+</div>
+
+{% endblock %}

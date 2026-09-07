@@ -1,0 +1,272 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Tableau de bord - Habiora Admin{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/admin.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="dashboard-container">
+
+    <div class="dashboard-header">
+        <div>
+            <h1>Tableau de bord</h1>
+            <p class="subtitle">Bienvenue, {{ user.username }} 👋</p>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'dashboard:admin_notifications' %}" class="btn btn-outline notif-badge">
+                <i class="fas fa-bell"></i> Notifications
+                {% if notifications %}
+                    <span class="badge-count">{{ notifications|length }}</span>
+                {% endif %}
+            </a>
+            <a href="{% url 'admin:index' %}" class="btn btn-primary">
+                <i class="fas fa-cog"></i> Admin Django
+            </a>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-top">
+                <div>
+                    <div class="stat-number">{{ total_users }}</div>
+                    <div class="stat-label">Utilisateurs</div>
+                </div>
+                <div class="stat-icon icon-purple">
+                    <i class="fas fa-users"></i>
+                </div>
+            </div>
+            <div class="stat-footer">
+                <span class="online">● {{ active_users }} actifs</span> (7 derniers jours)
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-top">
+                <div>
+                    <div class="stat-number">{{ total_properties }}</div>
+                    <div class="stat-label">Annonces</div>
+                </div>
+                <div class="stat-icon icon-orange">
+                    <i class="fas fa-home"></i>
+                </div>
+            </div>
+            <div class="stat-footer">
+                <span class="pending">● {{ properties_by_status.en_attente }} en attente</span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-top">
+                <div>
+                    <div class="stat-number">{{ total_bookings }}</div>
+                    <div class="stat-label">Réservations</div>
+                </div>
+                <div class="stat-icon icon-green">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+            </div>
+            <div class="stat-footer">
+                <span class="pending">● {{ bookings_by_status.en_attente }} en attente</span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-top">
+                <div>
+                    <div class="stat-number">{{ total_reviews }}</div>
+                    <div class="stat-label">Avis</div>
+                </div>
+                <div class="stat-icon icon-blue">
+                    <i class="fas fa-star"></i>
+                </div>
+            </div>
+            <div class="stat-footer">
+                <span>● Note moyenne: {{ avg_rating|default:"4.5" }}/5</span>
+            </div>
+        </div>
+    </div>
+
+    <h2 class="section-title">📋 <span>À traiter</span></h2>
+
+    <div class="pending-grid">
+        <!-- Annonces en attente -->
+        <div class="pending-card">
+            <div class="card-header">
+                <h4>Annonces à valider</h4>
+                <span class="badge">{{ pending_properties_count }}</span>
+            </div>
+
+            {% if pending_properties %}
+                {% for property in pending_properties %}
+                    <div class="pending-item">
+                        <div class="item-info">
+                            <strong>{{ property.title|truncatechars:30 }}</strong>
+                            <small>{{ property.owner.username }} • {{ property.created_at|date:"d/m/Y" }}</small>
+                        </div>
+                        <div class="item-actions">
+                            <a href="{% url 'dashboard:property_validate' property.id %}" class="btn-sm btn-sm-primary">
+                                <i class="fas fa-check"></i> Traiter
+                            </a>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-check-circle" style="color: #2ecc71;"></i>
+                    <p>Aucune annonce en attente</p>
+                </div>
+            {% endif %}
+
+            <a href="{% url 'dashboard:properties_list' %}?status=pending" class="view-all-link">
+                Voir toutes les annonces en attente →
+            </a>
+        </div>
+
+        <!-- Vérifications propriétaires -->
+        <div class="pending-card">
+            <div class="card-header">
+                <h4>Vérifications propriétaires</h4>
+                <span class="badge">{{ pending_verifications_count }}</span>
+            </div>
+            {% if pending_verifications %}
+                {% for verification in pending_verifications %}
+                    <div class="pending-item">
+                        <div class="item-info">
+                            <strong>{{ verification.user.username }}</strong>
+                            <small>Demandé le {{ verification.submitted_at|date:"d/m/Y" }}</small>
+                        </div>
+                        <div class="item-actions">
+                            <a href="{% url 'dashboard:verification_process' verification.id %}" class="btn-sm btn-sm-primary">
+                                <i class="fas fa-check"></i> Traiter
+                            </a>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-check-circle" style="color: #2ecc71;"></i>
+                    <p>Aucune vérification en attente</p>
+                </div>
+            {% endif %}
+            <a href="{% url 'dashboard:verifications_list' %}" class="view-all-link">
+                Voir toutes les demandes →
+            </a>
+        </div>
+
+        <!-- Signalements -->
+        <div class="pending-card">
+            <div class="card-header">
+                <h4>Signalements</h4>
+                <span class="badge">{{ pending_incidents_count }}</span>
+            </div>
+            {% if pending_incidents %}
+                {% for incident in pending_incidents %}
+                    <div class="pending-item">
+                        <div class="item-info">
+                            <strong>{{ incident.get_incident_type_display }}</strong>
+                            <small>Signalé par {{ incident.reported_by.username }} • {{ incident.created_at|date:"d/m/Y" }}</small>
+                        </div>
+                        <div class="item-actions">
+                            <a href="{% url 'dashboard:incident_process' incident.id %}" class="btn-sm btn-sm-danger">
+                                <i class="fas fa-exclamation-triangle"></i> Traiter
+                            </a>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-check-circle" style="color: #2ecc71;"></i>
+                    <p>Aucun signalement en attente</p>
+                </div>
+            {% endif %}
+            <a href="{% url 'dashboard:incidents_list' %}" class="view-all-link">
+                Voir tous les signalements →
+            </a>
+        </div>
+    </div>
+
+    <!-- ============================================
+    ACTIVITÉS RÉCENTES
+    ============================================ -->
+    <h2 class="section-title">🔄 <span>Activités récentes</span></h2>
+
+    <div class="activity-list">
+        {% if recent_activities %}
+            {% for activity in recent_activities %}
+                <div class="activity-item">
+                    <div class="activity-icon 
+                        {% if activity.action_type == 'property_approve' %}act-green
+                        {% elif activity.action_type == 'property_reject' %}act-red
+                        {% elif activity.action_type == 'owner_verify' %}act-purple
+                        {% elif activity.action_type == 'user_activate' %}act-blue
+                        {% elif activity.action_type == 'user_deactivate' %}act-orange
+                        {% elif activity.action_type == 'incident_resolve' %}act-yellow
+                        {% else %}act-purple{% endif %}">
+                        <i class="fas 
+                            {% if activity.action_type == 'property_approve' %}fa-check
+                            {% elif activity.action_type == 'property_reject' %}fa-times
+                            {% elif activity.action_type == 'owner_verify' %}fa-user-check
+                            {% elif activity.action_type == 'user_activate' %}fa-user-plus
+                            {% elif activity.action_type == 'user_deactivate' %}fa-user-minus
+                            {% elif activity.action_type == 'incident_resolve' %}fa-check-circle
+                            {% else %}fa-clock{% endif %}"></i>
+                    </div>
+                    <div class="activity-text">
+                        <p>{{ activity.description }}</p>
+                        <small>{{ activity.created_at|date:"d/m/Y H:i" }} • par {{ activity.admin.username }}</small>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <i class="fas fa-clock" style="color: var(--gray);"></i>
+                <p>Aucune activité récente</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- ============================================
+    LIENS RAPIDES
+    ============================================ -->
+    <div style="margin-top: 30px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+        <a href="{% url 'dashboard:users_list' %}" class="btn btn-primary" style="justify-content: center;">
+            <i class="fas fa-users"></i> Gérer les utilisateurs
+        </a>
+        <a href="{% url 'dashboard:properties_list' %}" class="btn btn-primary" style="justify-content: center;">
+            <i class="fas fa-home"></i> Gérer les annonces
+        </a>
+        <a href="{% url 'dashboard:admin_statistics' %}" class="btn btn-primary" style="justify-content: center;">
+            <i class="fas fa-chart-bar"></i> Voir les statistiques
+        </a>
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Actualiser automatiquement les notifications toutes les 30 secondes
+        setInterval(function() {
+            fetch('/dashboard/notifications/check/')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.count > 0) {
+                        const badge = document.querySelector('.notif-badge .badge-count');
+                        if (badge) {
+                            badge.textContent = data.count;
+                            badge.style.display = 'flex';
+                        }
+                    }
+                })
+                .catch(error => console.log('Erreur de mise à jour des notifications'));
+        }, 30000);
+    });
+</script>
+{% endblock %}

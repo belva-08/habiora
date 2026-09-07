@@ -1,0 +1,182 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Statut de vérification - Habiora{% endblock %}
+
+{% block extra_css %}
+<style>
+    .status-container {
+        padding-top: 120px;
+        padding-bottom: 60px;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+    
+    .status-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 40px;
+        text-align: center;
+    }
+    
+    .status-icon {
+        font-size: 80px;
+        margin-bottom: 20px;
+        display: block;
+    }
+    
+    .status-card h2 {
+        font-size: 28px;
+        margin-bottom: 10px;
+    }
+    
+    .status-card .status-label {
+        display: inline-block;
+        padding: 8px 24px;
+        border-radius: 30px;
+        font-weight: 600;
+        font-size: 14px;
+        margin: 15px 0;
+    }
+    
+    .status-pending {
+        background: rgba(241, 196, 15, 0.2);
+        color: #f1c40f;
+    }
+    
+    .status-approved {
+        background: rgba(46, 204, 113, 0.2);
+        color: #2ecc71;
+    }
+    
+    .status-rejected {
+        background: rgba(231, 76, 60, 0.2);
+        color: #e74c3c;
+    }
+    
+    .status-card .info-text {
+        color: var(--gray);
+        font-size: 14px;
+        line-height: 1.8;
+        margin: 20px 0;
+    }
+    
+    .status-card .admin-notes {
+        background: rgba(255,255,255,0.03);
+        border-radius: 10px;
+        padding: 15px 20px;
+        text-align: left;
+        margin: 20px 0;
+        border-left: 3px solid #e74c3c;
+        color: var(--gray);
+        font-size: 14px;
+    }
+    
+    .status-card .actions {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        margin-top: 25px;
+        flex-wrap: wrap;
+    }
+    
+    .btn-status {
+        padding: 12px 30px;
+        border: none;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #6720c5, #9140ed);
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(118, 37, 216, 0.3);
+    }
+    
+    .btn-outline {
+        background: transparent;
+        color: var(--white);
+        border: 1px solid var(--border);
+    }
+    
+    .btn-outline:hover {
+        border-color: var(--purple-light);
+        color: var(--purple-light);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="status-container">
+    <div class="status-card">
+        
+        {% if verification %}
+            {% if verification.status == 'pending' %}
+                <span class="status-icon">⏳</span>
+                <h2>En cours de vérification</h2>
+                <span class="status-label status-pending">En attente</span>
+                <p class="info-text">
+                    Vos documents sont en cours d'examen par notre équipe.<br>
+                    Vous recevrez une notification dès que le processus sera terminé.
+                </p>
+                <p style="color: var(--gray); font-size: 13px;">
+                    <i class="fas fa-clock"></i> Soumis le {{ verification.submitted_at|date:"d/m/Y à H:i" }}
+                </p>
+                
+            {% elif verification.status == 'approved' %}
+                <span class="status-icon">✅</span>
+                <h2>Compte vérifié !</h2>
+                <span class="status-label status-approved">Approuvé</span>
+                <p class="info-text">
+                    Félicitations ! Votre compte propriétaire a été vérifié avec succès.<br>
+                    Vous pouvez maintenant publier des annonces en toute confiance.
+                </p>
+                <p style="color: var(--gray); font-size: 13px;">
+                    <i class="fas fa-check-circle" style="color: #2ecc71;"></i> 
+                    Vérifié le {{ verification.verified_at|date:"d/m/Y à H:i" }}
+                </p>
+                
+            {% elif verification.status == 'rejected' %}
+                <span class="status-icon">❌</span>
+                <h2>Vérification rejetée</h2>
+                <span class="status-label status-rejected">Rejeté</span>
+                <p class="info-text">
+                    Votre demande de vérification a été rejetée.<br>
+                    Veuillez vérifier les informations ci-dessous et soumettre une nouvelle demande.
+                </p>
+                
+                {% if verification.admin_notes %}
+                    <div class="admin-notes">
+                        <strong style="color: #e74c3c;">Raison du rejet :</strong><br>
+                        {{ verification.admin_notes }}
+                    </div>
+                {% endif %}
+            {% endif %}
+            
+            <div class="actions">
+                {% if verification.status == 'pending' %}
+                    <a href="{% url 'accounts:profile' %}" class="btn-status btn-outline">
+                        <i class="fas fa-arrow-left"></i> Retour au profil
+                    </a>
+                {% elif verification.status == 'rejected' %}
+                    <a href="{% url 'accounts:verify_owner' %}" class="btn-status btn-primary">
+                        <i class="fas fa-redo"></i> Soumettre à nouveau
+                    </a>
+                    <a href="{% url 'accounts:profile' %}" class="btn-status btn-outline">
+                        <i class="fas fa-arrow-left"></i> Retour
+                    </a>
+                {% else %}
+                    <a href="{% url 'properties:create' %}" class="btn-status btn-primary">
+                        <i class="fas fa-plus"></i> Publier une

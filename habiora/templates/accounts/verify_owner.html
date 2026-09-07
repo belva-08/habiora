@@ -1,0 +1,485 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Vérification propriétaire - Habiora{% endblock %}
+
+{% block extra_css %}
+<style>
+    .verify-container {
+        padding-top: 120px;
+        padding-bottom: 60px;
+        max-width: 700px;
+        margin: 0 auto;
+    }
+    
+    .verify-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 40px;
+    }
+    
+    .verify-card .header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    
+    .verify-card .header h2 {
+        font-size: 28px;
+        margin-bottom: 10px;
+    }
+    
+    .verify-card .header p {
+        color: var(--gray);
+        font-size: 14px;
+    }
+    
+    .verify-card .header .icon {
+        font-size: 60px;
+        margin-bottom: 15px;
+        display: block;
+    }
+    
+    .form-group {
+        margin-bottom: 25px;
+    }
+    
+    .form-group label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 8px;
+        font-size: 14px;
+    }
+    
+    .form-group .help-text {
+        display: block;
+        color: var(--gray);
+        font-size: 12px;
+        margin-top: 6px;
+    }
+    
+    .file-upload {
+        position: relative;
+        border: 2px dashed var(--border);
+        border-radius: 12px;
+        padding: 30px;
+        text-align: center;
+        transition: all 0.3s;
+        cursor: pointer;
+    }
+    
+    .file-upload:hover {
+        border-color: var(--purple);
+        background: rgba(118, 37, 216, 0.05);
+    }
+    
+    .file-upload input[type="file"] {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+    }
+    
+    .file-upload .upload-icon {
+        font-size: 40px;
+        color: var(--purple-light);
+        display: block;
+        margin-bottom: 10px;
+    }
+    
+    .file-upload .upload-text {
+        color: var(--gray);
+        font-size: 14px;
+    }
+    
+    .file-upload .upload-text strong {
+        color: var(--white);
+    }
+    
+    .file-name {
+        margin-top: 10px;
+        padding: 8px 12px;
+        background: rgba(118, 37, 216, 0.1);
+        border-radius: 8px;
+        font-size: 13px;
+        color: var(--purple-light);
+        display: none;
+    }
+    
+    .file-name .remove-file {
+        color: #e74c3c;
+        cursor: pointer;
+        margin-left: 10px;
+    }
+    
+    .btn-verify {
+        width: 100%;
+        padding: 15px;
+        border: none;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #6720c5, #9140ed);
+        color: white;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        margin-top: 10px;
+    }
+    
+    .btn-verify:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(118, 37, 216, 0.3);
+    }
+    
+    .btn-verify:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+    }
+    
+    .documents-list {
+        margin-bottom: 25px;
+    }
+    
+    .documents-list .doc-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 16px;
+        background: rgba(255,255,255,0.03);
+        border-radius: 10px;
+        margin-bottom: 8px;
+    }
+    
+    .documents-list .doc-item .doc-name {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .documents-list .doc-item .doc-name i {
+        color: var(--purple-light);
+    }
+    
+    .documents-list .doc-item .doc-status {
+        font-size: 12px;
+        padding: 4px 12px;
+        border-radius: 20px;
+    }
+    
+    .doc-status-pending {
+        background: rgba(241, 196, 15, 0.2);
+        color: #f1c40f;
+    }
+    
+    .doc-status-approved {
+        background: rgba(46, 204, 113, 0.2);
+        color: #2ecc71;
+    }
+    
+    .doc-status-rejected {
+        background: rgba(231, 76, 60, 0.2);
+        color: #e74c3c;
+    }
+    
+    .alert {
+        padding: 15px 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .alert-success {
+        background: rgba(46, 204, 113, 0.15);
+        border: 1px solid #2ecc71;
+        color: #2ecc71;
+    }
+    
+    .alert-error {
+        background: rgba(231, 76, 60, 0.15);
+        border: 1px solid #e74c3c;
+        color: #e74c3c;
+    }
+    
+    .alert-info {
+        background: rgba(52, 152, 219, 0.15);
+        border: 1px solid #3498db;
+        color: #3498db;
+    }
+    
+    .alert ul {
+        margin: 0;
+        padding-left: 20px;
+    }
+    
+    @media (max-width: 768px) {
+        .verify-container {
+            padding-left: 15px;
+            padding-right: 15px;
+        }
+        
+        .verify-card {
+            padding: 25px;
+        }
+        
+        .verify-card .header h2 {
+            font-size: 22px;
+        }
+        
+        .file-upload {
+            padding: 20px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="verify-container">
+    <div class="verify-card">
+        
+        <div class="header">
+            <span class="icon">📋</span>
+            <h2>Vérification du compte propriétaire</h2>
+            <p>Fournissez les documents nécessaires pour vérifier votre identité en tant que propriétaire.</p>
+        </div>
+        
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{% if message.tags == 'error' %}error{% else %}info{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+        
+        {% if errors %}
+            <div class="alert alert-error">
+                <ul>
+                    {% for error in errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+        
+        {% if verification %}
+            <div class="documents-list">
+                <h4 style="margin-bottom: 15px;">📄 Documents soumis</h4>
+                
+                <div class="doc-item">
+                    <div class="doc-name">
+                        <i class="fas fa-id-card"></i>
+                        <span>Pièce d'identité</span>
+                    </div>
+                    {% if verification.identity_document %}
+                        <a href="{{ verification.identity_document.url }}" target="_blank" class="btn-sm btn-sm-primary">
+                            <i class="fas fa-eye"></i> Voir
+                        </a>
+                    {% else %}
+                        <span style="color: var(--gray); font-size: 12px;">Non soumis</span>
+                    {% endif %}
+                </div>
+                
+                <div class="doc-item">
+                    <div class="doc-name">
+                        <i class="fas fa-file-alt"></i>
+                        <span>Justificatif de propriété</span>
+                    </div>
+                    {% if verification.proof_of_ownership %}
+                        <a href="{{ verification.proof_of_ownership.url }}" target="_blank" class="btn-sm btn-sm-primary">
+                            <i class="fas fa-eye"></i> Voir
+                        </a>
+                    {% else %}
+                        <span style="color: var(--gray); font-size: 12px;">Non soumis</span>
+                    {% endif %}
+                </div>
+                
+                <div class="doc-item">
+                    <div class="doc-name">
+                        <i class="fas fa-receipt"></i>
+                        <span>Pièce fiscale</span>
+                    </div>
+                    {% if verification.tax_identification %}
+                        <a href="{{ verification.tax_identification.url }}" target="_blank" class="btn-sm btn-sm-primary">
+                            <i class="fas fa-eye"></i> Voir
+                        </a>
+                    {% else %}
+                        <span style="color: var(--gray); font-size: 12px;">Non soumis</span>
+                    {% endif %}
+                </div>
+                
+                <div class="doc-item" style="margin-top: 15px; background: rgba(255,255,255,0.05);">
+                    <div class="doc-name">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Statut</span>
+                    </div>
+                    <span class="doc-status doc-status-{{ verification.status }}">
+                        {% if verification.status == 'pending' %}⏳ En attente
+                        {% elif verification.status == 'approved' %}✅ Approuvé
+                        {% elif verification.status == 'rejected' %}❌ Rejeté
+                        {% endif %}
+                    </span>
+                </div>
+                
+                {% if verification.status == 'pending' %}
+                    <div class="alert alert-info" style="margin-top: 15px;">
+                        <i class="fas fa-clock"></i> Votre demande est en cours de traitement. Vous serez notifié du résultat.
+                    </div>
+                {% elif verification.status == 'approved' %}
+                    <div class="alert alert-success" style="margin-top: 15px;">
+                        <i class="fas fa-check-circle"></i> Félicitations ! Votre compte est vérifié.
+                    </div>
+                {% elif verification.status == 'rejected' and verification.admin_notes %}
+                    <div class="alert alert-error" style="margin-top: 15px;">
+                        <strong>Raison du rejet :</strong><br>
+                        {{ verification.admin_notes }}
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+        
+        {% if not verification or verification.status == 'rejected' %}
+            <form method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <div class="form-group">
+                    <label for="identity_document">Pièce d'identité <span style="color: #e74c3c;">*</span></label>
+                    <div class="file-upload" id="identity-upload">
+                        <span class="upload-icon">📄</span>
+                        <div class="upload-text">
+                            <strong>Cliquez pour télécharger</strong> ou glissez-déposez<br>
+                            <small style="color: var(--gray);">PDF, JPG, JPEG, PNG (max 5MB)</small>
+                        </div>
+                        <input type="file" id="identity_document" name="identity_document" accept=".pdf,.jpg,.jpeg,.png" required>
+                    </div>
+                    <div class="file-name" id="identity-filename">
+                        <i class="fas fa-file"></i> <span id="identity-text"></span>
+                        <span class="remove-file" onclick="removeFile('identity')">✕</span>
+                    </div>
+                    <small class="help-text">Carte d'identité nationale, passeport ou permis de conduire</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="proof_of_ownership">Justificatif de propriété <span style="color: #e74c3c;">*</span></label>
+                    <div class="file-upload" id="proof-upload">
+                        <span class="upload-icon">🏠</span>
+                        <div class="upload-text">
+                            <strong>Cliquez pour télécharger</strong> ou glissez-déposez<br>
+                            <small style="color: var(--gray);">PDF, JPG, JPEG, PNG (max 5MB)</small>
+                        </div>
+                        <input type="file" id="proof_of_ownership" name="proof_of_ownership" accept=".pdf,.jpg,.jpeg,.png" required>
+                    </div>
+                    <div class="file-name" id="proof-filename">
+                        <i class="fas fa-file"></i> <span id="proof-text"></span>
+                        <span class="remove-file" onclick="removeFile('proof')">✕</span>
+                    </div>
+                    <small class="help-text">Titre de propriété, acte de vente ou contrat de location</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="tax_identification">Pièce d'identification fiscale <span style="color: var(--gray);">(optionnel)</span></label>
+                    <div class="file-upload" id="tax-upload">
+                        <span class="upload-icon">💰</span>
+                        <div class="upload-text">
+                            <strong>Cliquez pour télécharger</strong> ou glissez-déposez<br>
+                            <small style="color: var(--gray);">PDF, JPG, JPEG, PNG (max 5MB)</small>
+                        </div>
+                        <input type="file" id="tax_identification" name="tax_identification" accept=".pdf,.jpg,.jpeg,.png">
+                    </div>
+                    <div class="file-name" id="tax-filename">
+                        <i class="fas fa-file"></i> <span id="tax-text"></span>
+                        <span class="remove-file" onclick="removeFile('tax')">✕</span>
+                    </div>
+                    <small class="help-text">Numéro d'identification fiscale ou quittance de taxe foncière</small>
+                </div>
+                
+                <button type="submit" class="btn-verify" id="submit-btn">
+                    <i class="fas fa-paper-plane"></i> Soumettre la demande
+                </button>
+            </form>
+        {% endif %}
+        
+        <div style="text-align: center; margin-top: 25px; padding-top: 20px; border-top: 1px solid var(--border);">
+            <a href="{% url 'accounts:profile' %}" style="color: var(--gray); text-decoration: none; font-size: 14px;">
+                <i class="fas fa-arrow-left"></i> Retour au profil
+            </a>
+        </div>
+        
+    </div>
+</div>
+
+<script>
+    function handleFileUpload(inputId, displayId, uploadId) {
+        const input = document.getElementById(inputId);
+        const display = document.getElementById(displayId);
+        const filenameSpan = document.getElementById(displayId.replace('filename', 'text'));
+        const upload = document.getElementById(uploadId);
+        
+        input.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                const size = (file.size / 1024 / 1024).toFixed(2);
+                
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('Le fichier est trop volumineux. Taille maximum : 5MB.');
+                    this.value = '';
+                    display.style.display = 'none';
+                    return;
+                }
+                
+                filenameSpan.textContent = `${file.name} (${size} MB)`;
+                display.style.display = 'block';
+                upload.style.borderColor = '#2ecc71';
+                upload.style.borderStyle = 'solid';
+                
+                document.getElementById('submit-btn').disabled = false;
+            }
+        });
+    }
+    
+    function removeFile(type) {
+        const inputMap = {
+            'identity': 'identity_document',
+            'proof': 'proof_of_ownership',
+            'tax': 'tax_identification'
+        };
+        
+        const displayMap = {
+            'identity': 'identity-filename',
+            'proof': 'proof-filename',
+            'tax': 'tax-filename'
+        };
+        
+        const uploadMap = {
+            'identity': 'identity-upload',
+            'proof': 'proof-upload',
+            'tax': 'tax-upload'
+        };
+        
+        const input = document.getElementById(inputMap[type]);
+        const display = document.getElementById(displayMap[type]);
+        const upload = document.getElementById(uploadMap[type]);
+        
+        input.value = '';
+        display.style.display = 'none';
+        upload.style.borderColor = 'var(--border)';
+        upload.style.borderStyle = 'dashed';
+        
+        const identity = document.getElementById('identity_document');
+        const proof = document.getElementById('proof_of_ownership');
+        
+        if (!identity.files || !identity.files[0] || !proof.files || !proof.files[0]) {
+            document.getElementById('submit-btn').disabled = true;
+        }
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        handleFileUpload('identity_document', 'identity-filename', 'identity-upload');
+        handleFileUpload('proof_of_ownership', 'proof-filename', 'proof-upload');
+        handleFileUpload('tax_identification', 'tax-filename', 'tax-upload');
+    });
+</script>
+
+{% endblock %}

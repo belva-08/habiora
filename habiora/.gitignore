@@ -1,0 +1,59 @@
+# ==========================================
+# Django & Python Core Files
+# ==========================================
+*.py[cod]
+*$py.class
+__pycache__/
+*.so
+.Python
+db.sqlite3
+db.sqlite3-journal
+
+# ==========================================
+# Virtual Environments & Dependencies
+# ==========================================
+venv/
+.venv/
+env/
+.env/
+ENV/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.pytest_cache/
+.coverage
+htmlcov/
+.poetry/
+.pdm/
+
+# ==========================================
+# Django Specific Media & Static Assets
+# ==========================================
+media/
+staticfiles/
+static_cdn/
+
+# ==========================================
+# Sensitive Configuration & Environment Variables
+# ==========================================
+.env
+.env.*
+!.env.example
+secrets.json
+
+# ==========================================
+# IDE & Code Editor Settings
+# ==========================================
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# ==========================================
+# OS & System-Specific Files
+# ==========================================
+.DS_Store
+Thumbs.db

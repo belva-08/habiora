@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Tableau de bord - Habiora{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="dashboard-container">
+
+    <div class="dashboard-header">
+        <div>
+            <h1>Tableau de bord</h1>
+            <p class="subtitle">Bienvenue, {{ user.first_name|default:user.username }} 👋</p>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'dashboard:client_search' %}" class="btn btn-primary">
+                <i class="fas fa-search"></i> Rechercher
+            </a>
+            <a href="{% url 'notifications:list' %}" class="btn btn-outline notif-badge">
+                <i class="fas fa-bell"></i> Notifications
+                {% if unread_notifications > 0 %}
+                    <span class="badge-count">{{ unread_notifications }}</span>
+                {% endif %}
+            </a>
+            <a href="{% url 'accounts:profile' %}" class="btn btn-outline">
+                <i class="fas fa-user"></i> Profil
+            </a>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-top">
+                <div>
+                    <div class="stat-number">{{ total_bookings }}</div>
+                    <div class="stat-label">Réservations</div>
+                </div>
+                <div class="stat-icon icon-purple">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-top">
+                <div>
+                    <div class="stat-number">{{ pending_bookings }}</div>
+                    <div class="stat-label">En attente</div>
+                </div>
+                <div class="stat-icon icon-yellow">
+                    <i class="fas fa-clock"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-top">
+                <div>
+                    <div class="stat-number">{{ confirmed_bookings }}</div>
+                    <div class="stat-label">Confirmées</div>
+                </div>
+                <div class="stat-icon icon-green">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-top">
+                <div>
+                    <div class="stat-number">{{ favorites_count }}</div>
+                    <div class="stat-label">Favoris</div>
+                </div>
+                <div class="stat-icon icon-pink">
+                    <i class="fas fa-heart"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-top">
+                <div>
+                    <div class="stat-number">{{ total_reviews }}</div>
+                    <div class="stat-label">Avis</div>
+                </div>
+                <div class="stat-icon icon-blue">
+                    <i class="fas fa-star"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-top">
+                <div>
+                    <div class="stat-number">{{ unread_messages }}</div>
+                    <div class="stat-label">Messages non lus</div>
+                </div>
+                <div class="stat-icon icon-orange">
+                    <i class="fas fa-envelope"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="content-grid">
+        
+        <div class="content-card">
+            <div class="card-header">
+                <h4><i class="fas fa-calendar-alt" style="color: var(--purple-light);"></i> Prochaines réservations</h4>
+                <a href="{% url 'dashboard:client_bookings' %}" class="view-all">Voir tout →</a>
+            </div>
+            
+            {% if upcoming_bookings %}
+                {% for booking in upcoming_bookings %}
+                    <div class="list-item">
+                        <div class="item-info">
+                            <strong>{{ booking.property.title|truncatechars:30 }}</strong>
+                            <span class="item-meta">
+                                <i class="fas fa-calendar"></i> {{ booking.start_date|date:"d/m/Y" }} - {{ booking.end_date|date:"d/m/Y" }}
+                            </span>
+                        </div>
+                        <span class="item-status status-{{ booking.status }}">
+                            {{ booking.get_status_display }}
+                        </span>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-calendar-plus"></i>
+                    <p>Aucune réservation à venir</p>
+                    <a href="{% url 'properties:list' %}" class="empty-action">Découvrir des logements →</a>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="content-card">
+            <div class="card-header">
+                <h4><i class="fas fa-bell" style="color: var(--orange);"></i> Dernières notifications</h4>
+                <a href="{% url 'notifications:list' %}" class="view-all">Voir tout →</a>
+            </div>
+            
+            {% if recent_notifications %}
+                {% for notif in recent_notifications %}
+                    <div class="list-item">
+                        <div class="item-info">
+                            <strong>{{ notif.title|truncatechars:40 }}</strong>
+                            <span class="item-meta
