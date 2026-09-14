@@ -7,7 +7,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 from datetime import timedelta
 
-from .models import Property, PropertyImage, PropertyFeature
+from .models import Property, PropertyImage
 from bookings.models import Booking
 from reviews.models import Review, IncidentReport
 from notifications.models import Notification
@@ -204,17 +204,17 @@ def property_detail(request, property_id):
     if request.user.is_authenticated:
         has_booked = Booking.objects.filter(
             property=property,
-            client=request.user,
+            tenant=request.user,
             status__in=['confirmed', 'completed']
         ).exists()
         
         can_review = Booking.objects.filter(
             property=property,
-            client=request.user,
+            tenant=request.user,
             status='completed'
         ).exists() and not Review.objects.filter(
             property=property,
-            user=request.user
+            author=request.user
         ).exists()
     
     # ===== DISPONIBILITÉ (30 jours) =====
@@ -300,11 +300,11 @@ def property_search_ajax(request):
         return JsonResponse([], safe=False)
     
     properties = Property.objects.filter(
-        is_approved=True,
-        is_active=True,
         Q(title__icontains=query) |
         Q(quartier__icontains=query) |
-        Q(address__icontains=query)
+        Q(address__icontains=query),
+        is_approved=True,
+        is_active=True,
     )[:10]
     
     results = []

@@ -522,19 +522,19 @@ def client_dashboard(request):
     """
     user = request.user
     
-    total_bookings = Booking.objects.filter(client=user).count()
-    pending_bookings = Booking.objects.filter(client=user, status='pending').count()
-    confirmed_bookings = Booking.objects.filter(client=user, status='confirmed').count()
-    completed_bookings = Booking.objects.filter(client=user, status='completed').count()
-    cancelled_bookings = Booking.objects.filter(client=user, status='cancelled').count()
+    total_bookings = Booking.objects.filter(tenant=user).count()
+    pending_bookings = Booking.objects.filter(tenant=user, status='pending').count()
+    confirmed_bookings = Booking.objects.filter(tenant=user, status='confirmed').count()
+    completed_bookings = Booking.objects.filter(tenant=user, status='completed').count()
+    cancelled_bookings = Booking.objects.filter(tenant=user, status='cancelled').count()
     
     upcoming_bookings = Booking.objects.filter(
-        client=user,
+        tenant=user,
         status='confirmed',
         start_date__gte=timezone.now().date()
     ).order_by('start_date')[:5]
     
-    total_reviews = Review.objects.filter(user=user).count()
+    total_reviews = Review.objects.filter(author=user).count()
     
     try:
         favorites_count = Favorite.objects.filter(user=user).count()
@@ -542,9 +542,9 @@ def client_dashboard(request):
         favorites_count = 0
     
     unread_messages = Message.objects.filter(
-        receiver=user,
+        conversation__participants=user,
         is_read=False
-    ).count()
+    ).exclude(sender=user).count()
     
     unread_notifications = Notification.objects.filter(
         user=user,
@@ -552,7 +552,7 @@ def client_dashboard(request):
     ).count()
     
     recent_bookings = Booking.objects.filter(
-        client=user
+        tenant=user
     ).order_by('-created_at')[:5]
     
     recent_notifications = Notification.objects.filter(
@@ -597,7 +597,7 @@ def client_bookings(request):
     """
     user = request.user
     
-    bookings = Booking.objects.filter(client=user).order_by('-created_at')
+    bookings = Booking.objects.filter(tenant=user).order_by('-created_at')
     
     status_filter = request.GET.get('status')
     if status_filter:
@@ -617,7 +617,7 @@ def client_booking_detail(request, booking_id):
     URL: /dashboard/client/booking/<int:booking_id>/
     Template: dashboard/client_booking_detail.html
     """
-    booking = get_object_or_404(Booking, id=booking_id, client=request.user)
+    booking = get_object_or_404(Booking, id=booking_id, tenant=request.user)
     
     context = {
         'booking': booking,
@@ -631,7 +631,7 @@ def client_booking_cancel(request, booking_id):
     Annuler une réservation
     URL: /dashboard/client/booking/<int:booking_id>/cancel/
     """
-    booking = get_object_or_404(Booking, id=booking_id, client=request.user)
+    booking = get_object_or_404(Booking, id=booking_id, tenant=request.user)
     
     if booking.status in ['cancelled', 'completed']:
         messages.warning(request, "Cette réservation ne peut pas être annulée.")
@@ -643,7 +643,7 @@ def client_booking_cancel(request, booking_id):
         booking.save()
         
         Notification.objects.create(
-            user=booking.owner,
+                user=booking.property.owner,
             type='booking_cancelled',
             title='Réservation annulée',
             message=f"Le client {request.user.username} a annulé la réservation pour {booking.property.title}.",
@@ -680,7 +680,7 @@ def client_reviews(request):
     URL: /dashboard/client/reviews/
     Template: dashboard/client_reviews.html
     """
-    reviews = Review.objects.filter(user=request.user).order_by('-created_at')
+    reviews = Review.objects.filter(author=request.user).order_by('-created_at')
     
     context = {
         'reviews': reviews,
@@ -695,7 +695,7 @@ def client_review_edit(request, review_id):
     URL: /dashboard/client/review/<int:review_id>/edit/
     Template: dashboard/client_review_edit.html
     """
-    review = get_object_or_404(Review, id=review_id, user=request.user)
+    review = get_object_or_404(Review, id=review_id, author=request.user)
     
     if request.method == 'POST':
         rating = request.POST.get('rating')
@@ -722,7 +722,7 @@ def client_review_delete(request, review_id):
     Supprimer un avis
     URL: /dashboard/client/review/<int:review_id>/delete/
     """
-    review = get_object_or_404(Review, id=review_id, user=request.user)
+    review = get_object_or_404(Review, id=review_id, author=request.user)
     
     if request.method == 'POST':
         review.delete()
@@ -1232,14 +1232,14 @@ def owner_booking_process(request, booking_id):
             
             # Notification au client
             Notification.objects.create(
-                user=booking.client,
+                user=booking.tenant,
                 type='booking_confirmed',
                 title='✅ Réservation confirmée',
                 message=f"Votre réservation pour '{booking.property.title}' a été confirmée par le propriétaire.",
                 link=f'/bookings/{booking.id}/'
             )
             
-            messages.success(request, f"La réservation de {booking.client.username} a été acceptée.")
+            messages.success(request, f"La réservation de {booking.tenant.username} a été acceptée.")
             
         elif action == 'reject':
             booking.status = 'refused'
@@ -1248,14 +1248,14 @@ def owner_booking_process(request, booking_id):
             
             # Notification au client
             Notification.objects.create(
-                user=booking.client,
+                user=booking.tenant,
                 type='booking_cancelled',
                 title='❌ Réservation refusée',
                 message=f"Votre réservation pour '{booking.property.title}' a été refusée par le propriétaire.",
                 link=f'/bookings/{booking.id}/'
             )
             
-            messages.info(request, f"La réservation de {booking.client.username} a été refusée.")
+            messages.info(request, f"La réservation de {booking.tenant.username} a été refusée.")
         
         return redirect('dashboard:owner_bookings')
     
