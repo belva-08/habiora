@@ -19,9 +19,10 @@ from search.models import SearchHistory
 from django.http import JsonResponse
 from properties.models import Property, PropertyImage
 from chat.models import Conversation, Message
-
-
-
+from calendar import monthrange
+import json
+ 
+ 
 def admin_required(view_func):
     """Décorateur pour restreindre aux administrateurs"""
     def wrapper(request, *args, **kwargs):
@@ -1129,6 +1130,34 @@ def owner_property_edit(request, property_id):
 
 @login_required
 @owner_required
+def delete_property_image(request, image_id):
+    """Supprimer une image d'une annonce appartenant au propriétaire connecté."""
+    image = get_object_or_404(
+        PropertyImage,
+        id=image_id,
+        property__owner=request.user,
+    )
+    property_id = image.property_id
+
+    if request.method == 'POST':
+        was_main = image.is_main
+        image.delete()
+
+        if was_main:
+            next_image = PropertyImage.objects.filter(
+                property_id=property_id,
+            ).first()
+            if next_image:
+                next_image.is_main = True
+                next_image.save(update_fields=['is_main'])
+
+        messages.success(request, "L'image a été supprimée.")
+
+    return redirect('dashboard:owner_property_edit', property_id=property_id)
+
+
+@login_required
+@owner_required
 def owner_property_delete(request, property_id):
     """
     Supprimer une annonce
@@ -1450,9 +1479,277 @@ def owner_confirm_availability(request):
         is_approved=True,
         last_confirmation_date__lt=thirty_days_ago
     )
-    
+   
     context = {
         'properties_to_confirm': properties_to_confirm,
     }
     return render(request, 'dashboard/owner_confirm_availability.html', context)
+
+    # dashboard/views.py - AJOUTER CETTE FONCTION
+
+
+@login_required
+def owner_statistics(request):
+    """
+    Statistiques détaillées du propriétaire
+    URL: /dashboard/proprietaire/statistiques/
+    Template: dashboard/owner_statistics.html
+    """
+    user = request.user
+    
+    # ============================================
+    # 1. STATISTIQUES GÉNÉRALES
+    # ============================================
+    
+    # Annonces
+    total_properties = Property.objects.filter(owner=user).count()
+    active_properties = Property.objects.filter(owner=user, is_active=True, is_approved=True).count()
+    pending_properties = Property.objects.filter(owner=user, is_approved=False).count()
+    
+    # Réservations
+    total_bookings = Booking.objects.filter(owner=user).count()
+    pending_bookings = Booking.objects.filter(owner=user, status='pending').count()
+    confirmed_bookings = Booking.objects.filter(owner=user, status='confirmed').count()
+    completed_bookings = Booking.objects.filter(owner=user, status='completed').count()
+    cancelled_bookings = Booking.objects.filter(owner=user, status='cancelled').count()
+    
+    # Revenus
+    total_revenue = Booking.objects.filter(
+        owner=user,
+        status__in=['confirmed', 'completed']
+    ).aggregate(total=Sum('total_price'))['total'] or 0
+    
+    # Revenus du mois en cours
+    current_month_start = timezone.now().replace(day=1, hour=0, minute=0, second=0)
+    monthly_revenue = Booking.objects.filter(
+        owner=user,
+        status__in=['confirmed', 'completed'],
+        created_at__gte=current_month_start
+    ).aggregate(total=Sum('total_price'))['total'] or 0
+    
+    # Avis
+    properties_ids = Property.objects.filter(owner=user).values_list('id', flat=True)
+    reviews = Review.objects.filter(property_id__in=properties_ids)
+    total_reviews = reviews.count()
+    avg_rating = reviews.aggregate(avg=Avg('rating'))['avg'] or 0
+    
+    # Vues totales
+    total_views = Property.objects.filter(owner=user).aggregate(
+        total=Sum('views_count')
+    )['total'] or 0
+    
+    # Taux d'occupation
+    # (Réservations confirmées ou terminées / Total annonces actives)
+    if active_properties > 0:
+        occupied_properties = Property.objects.filter(
+            owner=user,
+            is_active=True,
+            is_approved=True,
+            bookings__status__in=['confirmed', 'completed']
+        ).distinct().count()
+        occupancy_rate = round((occupied_properties / active_properties) * 100, 1)
+    else:
+        occupancy_rate = 0
+    
+    # ============================================
+    # 2. ÉVOLUTION MENSUELLE (6 derniers mois)
+    # ============================================
+    
+    monthly_data = []
+    for i in range(5, -1, -1):
+        # Calculer le mois
+        month = timezone.now().month - i
+        year = timezone.now().year
+        
+        if month <= 0:
+            month += 12
+            year -= 1
+        
+        # Premier jour du mois
+        start_date = timezone.datetime(year, month, 1)
+        
+        # Dernier jour du mois
+        last_day = monthrange(year, month)[1]
+        end_date = timezone.datetime(year, month, last_day, 23, 59, 59)
+        
+        # Réservations du mois
+        bookings_count = Booking.objects.filter(
+            owner=user,
+            created_at__gte=start_date,
+            created_at__lte=end_date
+        ).count()
+        
+        # Revenus du mois
+        revenue = Booking.objects.filter(
+            owner=user,
+            status__in=['confirmed', 'completed'],
+            created_at__gte=start_date,
+            created_at__lte=end_date
+        ).aggregate(total=Sum('total_price'))['total'] or 0
+        
+        # Vues du mois (approximatif)
+        views = Property.objects.filter(
+            owner=user,
+            created_at__gte=start_date,
+            created_at__lte=end_date
+        ).aggregate(total=Sum('views_count'))['total'] or 0
+        
+        # Nom du mois en français
+        month_names = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 
+                       'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc']
+        
+        monthly_data.append({
+            'month': month_names[month - 1],
+            'year': year,
+            'full_label': f"{month_names[month - 1]} {year}",
+            'bookings': bookings_count,
+            'revenue': float(revenue),
+            'views': views,
+        })
+    
+    # ============================================
+    # 3. TOP ANNONCES (par réservations)
+    # ============================================
+    
+    top_properties = Property.objects.filter(
+        owner=user
+    ).annotate(
+        booking_count=Count('bookings'),
+        total_revenue=Sum('bookings__total_price', filter=Q(bookings__status__in=['confirmed', 'completed'])),
+        review_count=Count('reviews'),
+        avg_rating=Avg('reviews__rating'),
+    ).order_by('-booking_count')[:5]
+    
+    top_properties_data = []
+    for prop in top_properties:
+        top_properties_data.append({
+            'id': prop.id,
+            'title': prop.title,
+            'quartier': prop.quartier,
+            'price': int(prop.price),
+            'views': prop.views_count,
+            'bookings': prop.booking_count or 0,
+            'revenue': float(prop.total_revenue or 0),
+            'reviews': prop.review_count or 0,
+            'rating': round(prop.avg_rating or 0, 1),
+        })
+    
+    # ============================================
+    # 4. RÉPARTITION DES STATUTS DE RÉSERVATION
+    # ============================================
+    
+    booking_statuses = {
+        'pending': pending_bookings,
+        'confirmed': confirmed_bookings,
+        'completed': completed_bookings,
+        'cancelled': cancelled_bookings,
+    }
+    
+    # ============================================
+    # 5. RÉPARTITION DES NOTES (Avis)
+    # ============================================
+    
+    rating_distribution = {}
+    for i in range(1, 6):
+        rating_distribution[i] = reviews.filter(rating=i).count()
+    
+    # ============================================
+    # 6. RÉPARTITION PAR QUARTIER
+    # ============================================
+    
+    properties_by_quartier = Property.objects.filter(
+        owner=user
+    ).values('quartier').annotate(
+        count=Count('id'),
+        total_bookings=Count('bookings'),
+        total_revenue=Sum('bookings__total_price', filter=Q(bookings__status__in=['confirmed', 'completed'])),
+    ).order_by('-count')[:10]
+
+    properties_by_quartier_data = [
+        {
+            'quartier': item['quartier'],
+            'count': item['count'],
+        }
+        for item in properties_by_quartier
+    ]
+    
+    # ============================================
+    # 7. RÉPARTITION PAR TYPE DE LOGEMENT
+    # ============================================
+    
+    properties_by_type = Property.objects.filter(
+        owner=user
+    ).values('property_type').annotate(
+        count=Count('id'),
+        total_bookings=Count('bookings'),
+    ).order_by('-count')
+    
+    # Traduire les types
+    type_names = {
+        'appartement': 'Appartement',
+        'maison': 'Maison',
+        'studio': 'Studio',
+        'duplex': 'Duplex',
+        'villa': 'Villa',
+        'chambre': 'Chambre',
+    }
+    
+    properties_by_type_data = []
+    for item in properties_by_type:
+        properties_by_type_data.append({
+            'type': type_names.get(item['property_type'], item['property_type']),
+            'count': item['count'],
+            'bookings': item['total_bookings'],
+        })
+    
+    # ============================================
+    # 8. TAUX DE CONVERSION
+    # ============================================
+    
+    # Vues → Réservations
+    if total_views > 0:
+        conversion_rate = round((total_bookings / total_views) * 100, 2)
+    else:
+        conversion_rate = 0
+    
+    context = {
+        # Statistiques générales
+        'total_properties': total_properties,
+        'active_properties': active_properties,
+        'pending_properties': pending_properties,
+        'total_bookings': total_bookings,
+        'pending_bookings': pending_bookings,
+        'confirmed_bookings': confirmed_bookings,
+        'completed_bookings': completed_bookings,
+        'cancelled_bookings': cancelled_bookings,
+        'total_revenue': total_revenue,
+        'monthly_revenue': monthly_revenue,
+        'total_reviews': total_reviews,
+        'avg_rating': round(avg_rating, 1),
+        'total_views': total_views,
+        'occupancy_rate': occupancy_rate,
+        'conversion_rate': conversion_rate,
+        
+        # Données pour graphiques
+        'monthly_data_json': json.dumps(monthly_data),
+        'top_properties_json': json.dumps(top_properties_data),
+        'booking_statuses_json': json.dumps(booking_statuses),
+        'rating_distribution_json': json.dumps(rating_distribution),
+        'properties_by_type_json': json.dumps(properties_by_type_data),
+        'properties_by_quartier_json': json.dumps(properties_by_quartier_data),
+        'monthly_data': monthly_data,
+        'booking_statuses_data': booking_statuses,
+        'rating_distribution_data': rating_distribution,
+        'properties_by_type_data': properties_by_type_data,
+        'properties_by_quartier_data': properties_by_quartier_data,
+        
+        # Listes
+        'top_properties': top_properties_data,
+        'properties_by_quartier': properties_by_quartier,
+        'properties_by_type': properties_by_type_data,
+        'rating_distribution': rating_distribution,
+        'booking_statuses': booking_statuses,
+    }
+    
+    return render(request, 'dashboard/owner_statistics.html', context)
 # Create your views here.

@@ -69,4 +69,50 @@ urlpatterns = [
     path('notifications/', views.admin_notifications, name='admin_notifications'),
     path('notifications/marquer-toutes-lues/', views.mark_all_read, name='mark_all_read'),
     path('notifications/check/', views.check_notifications, name='check_notifications'),
+    path('proprietaire/statistiques/', views.owner_statistics, name='owner_statistics'),
+    # Redirection
+    path('', views.dashboard_redirect, name='dashboard_redirect'),
+    
+    # Dashboard Admin
+    path('admin/', views.admin_dashboard, name='admin_dashboard'),
+    path('admin/statistiques/', views.admin_statistics, name='admin_statistics'),
+    
+    # Dashboard Client
+    path('client/', views.client_dashboard, name='client_dashboard'),
+    path('client/recherche/', views.client_search, name='client_search'),
+    path('client/reservations/', views.client_bookings, name='client_bookings'),
+    path('client/reservation/<int:booking_id>/', views.client_booking_detail, name='client_booking_detail'),
+    path('client/reservation/<int:booking_id>/annuler/', views.client_booking_cancel, name='client_booking_cancel'),
+    path('client/favoris/', views.client_favorites, name='client_favorites'),
+    path('client/avis/', views.client_reviews, name='client_reviews'),
+    path('client/messages/', views.client_messages, name='client_messages'),
+    path('client/profil/', views.client_profile, name='client_profile'),
+    
+    # Dashboard Propriétaire
+    path('proprietaire/', views.owner_dashboard, name='owner_dashboard'),
+    path('proprietaire/statistiques/', views.owner_statistics, name='owner_statistics'),
+    path('proprietaire/verification/', views.owner_verification_status, name='owner_verification_status'),
+    path('proprietaire/messages/', views.owner_messages, name='owner_messages'),
+    path('proprietaire/confirmer-disponibilite/', views.owner_confirm_availability, name='owner_confirm_availability'),
+    
+    # Annonces Propriétaire
+    path('proprietaire/annonces/', views.owner_properties, name='owner_properties'),
+    path('proprietaire/annonce/creer/', views.owner_property_create, name='owner_property_create'),
+    path('proprietaire/annonce/<int:property_id>/modifier/', views.owner_property_edit, name='owner_property_edit'),
+    path('proprietaire/annonce/<int:property_id>/supprimer/', views.owner_property_delete, name='owner_property_delete'),
+    path('proprietaire/annonce/<int:property_id>/activer/', views.owner_property_toggle_active, name='owner_property_toggle_active'),
+    path('proprietaire/image/<int:image_id>/supprimer/', views.delete_property_image, name='delete_property_image'),
+    
+    # Réservations Propriétaire
+    path('proprietaire/reservations/', views.owner_bookings, name='owner_bookings'),
+    path('proprietaire/reservation/<int:booking_id>/', views.owner_booking_detail, name='owner_booking_detail'),
+    path('proprietaire/reservation/<int:booking_id>/traiter/', views.owner_booking_process, name='owner_booking_process'),
+    
+    # Avis Propriétaire
+    path('proprietaire/avis/', views.owner_reviews, name='owner_reviews'),
+    
+    # Notifications
+    path('notifications/', views.admin_notifications, name='admin_notifications'),
+    path('notifications/marquer-toutes-lues/', views.mark_all_read, name='mark_all_read'),
+    path('notifications/check/', views.check_notifications, name='check_notifications'),
 ]

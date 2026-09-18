@@ -1,0 +1,651 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Statistiques - Habiora Propriétaire{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'css/statistics.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="stats-container">
+
+    <!-- ===== EN-TÊTE ===== -->
+    <div class="stats-header">
+        <div>
+            <h1>📊 Statistiques</h1>
+            <p class="subtitle">Analysez les performances de vos annonces</p>
+        </div>
+        <div class="header-actions">
+            <button onclick="window.print()" class="btn btn-outline">
+                <i class="fas fa-print"></i> Imprimer
+            </button>
+            <a href="{% url 'dashboard:owner_dashboard' %}" class="btn btn-outline">
+                <i class="fas fa-arrow-left"></i> Retour
+            </a>
+        </div>
+    </div>
+
+    <!-- ===== CARTES STATISTIQUES PRINCIPALES ===== -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-top">
+                <div>
+                    <div class="stat-number">{{ total_revenue|floatformat:0 }} FCFA</div>
+                    <div class="stat-label">Revenus totaux</div>
+                </div>
+                <div class="stat-icon icon-green">
+                    <i class="fas fa-money-bill-wave"></i>
+                </div>
+            </div>
+            <div class="stat-trend up">
+                <i class="fas fa-arrow-up"></i> {{ monthly_revenue|floatformat:0 }} FCFA ce mois
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-top">
+                <div>
+                    <div class="stat-number">{{ total_bookings }}</div>
+                    <div class="stat-label">Réservations totales</div>
+                </div>
+                <div class="stat-icon icon-blue">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+            </div>
+            <div class="stat-trend">
+                <span style="color: var(--orange);">{{ pending_bookings }} en attente</span>
+                <span style="color: var(--green); margin-left: 10px;">{{ confirmed_bookings }} confirmées</span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-top">
+                <div>
+                    <div class="stat-number">{{ total_views }}</div>
+                    <div class="stat-label">Vues totales</div>
+                </div>
+                <div class="stat-icon icon-purple">
+                    <i class="fas fa-eye"></i>
+                </div>
+            </div>
+            <div class="stat-trend">
+                Taux de conversion : <strong>{{ conversion_rate }}%</strong>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-top">
+                <div>
+                    <div class="stat-number">{{ avg_rating }}/5</div>
+                    <div class="stat-label">Note moyenne</div>
+                </div>
+                <div class="stat-icon icon-yellow">
+                    <i class="fas fa-star"></i>
+                </div>
+            </div>
+            <div class="stat-trend">
+                {{ total_reviews }} avis reçus
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-top">
+                <div>
+                    <div class="stat-number">{{ occupancy_rate }}%</div>
+                    <div class="stat-label">Taux d'occupation</div>
+                </div>
+                <div class="stat-icon icon-orange">
+                    <i class="fas fa-home"></i>
+                </div>
+            </div>
+            <div class="stat-trend">
+                {{ active_properties }} annonces actives
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-top">
+                <div>
+                    <div class="stat-number">{{ active_properties }}</div>
+                    <div class="stat-label">Annonces actives</div>
+                </div>
+                <div class="stat-icon icon-pink">
+                    <i class="fas fa-building"></i>
+                </div>
+            </div>
+            <div class="stat-trend">
+                {{ total_properties }} annonces au total
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== GRAPHIQUE PRINCIPAL : REVENUS ET RÉSERVATIONS ===== -->
+    <div class="chart-section">
+        <div class="chart-card full-width">
+            <div class="chart-header">
+                <h3><i class="fas fa-chart-line" style="color: var(--purple-light);"></i> Évolution sur 6 mois</h3>
+                <div class="chart-legend">
+                    <span><span class="dot" style="background: #7625d8;"></span> Revenus (FCFA)</span>
+                    <span><span class="dot" style="background: #ff9700;"></span> Réservations</span>
+                </div>
+            </div>
+            <div class="chart-body">
+                <canvas id="revenueChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== GRILLE DE GRAPHIQUES ===== -->
+    <div class="charts-grid">
+        
+        <!-- Statuts des réservations -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3><i class="fas fa-chart-pie" style="color: var(--blue);"></i> Statuts des réservations</h3>
+            </div>
+            <div class="chart-body">
+                <canvas id="bookingStatusChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Répartition des notes -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3><i class="fas fa-star" style="color: var(--yellow);"></i> Répartition des notes</h3>
+            </div>
+            <div class="chart-body">
+                <canvas id="ratingChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Types de logements -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3><i class="fas fa-building" style="color: var(--purple-light);"></i> Types de logements</h3>
+            </div>
+            <div class="chart-body">
+                <canvas id="propertyTypeChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Top quartiers -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3><i class="fas fa-map-marker-alt" style="color: var(--orange);"></i> Top quartiers</h3>
+            </div>
+            <div class="chart-body">
+                <canvas id="quartierChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== TOP ANNONCES ===== -->
+    <div class="table-section">
+        <div class="table-header">
+            <h3><i class="fas fa-trophy" style="color: var(--orange);"></i> Top 5 des annonces</h3>
+        </div>
+        <div class="table-container">
+            <table class="stats-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Annonce</th>
+                        <th>Quartier</th>
+                        <th>Vues</th>
+                        <th>Réservations</th>
+                        <th>Revenus</th>
+                        <th>Note</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for prop in top_properties %}
+                    <tr>
+                        <td>
+                            <span class="rank-badge rank-{{ forloop.counter }}">
+                                {{ forloop.counter }}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{% url 'properties:detail' prop.id %}" class="property-link">
+                                {{ prop.title|truncatechars:30 }}
+                            </a>
+                        </td>
+                        <td>{{ prop.quartier }}</td>
+                        <td><i class="fas fa-eye" style="color: var(--gray);"></i> {{ prop.views }}</td>
+                        <td><i class="fas fa-calendar-check" style="color: var(--blue);"></i> {{ prop.bookings }}</td>
+                        <td><strong style="color: var(--orange);">{{ prop.revenue|floatformat:0 }} FCFA</strong></td>
+                        <td>
+                            <span style="color: var(--yellow);">
+                                <i class="fas fa-star"></i> {{ prop.rating }}
+                            </span>
+                            <small style="color: var(--gray);">({{ prop.reviews }})</small>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="empty-table">
+                            <i class="fas fa-chart-bar"></i>
+                            <p>Aucune donnée disponible</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ===== TABLEAU PAR QUARTIER ===== -->
+    <div class="table-section">
+        <div class="table-header">
+            <h3><i class="fas fa-map" style="color: var(--purple-light);"></i> Performance par quartier</h3>
+        </div>
+        <div class="table-container">
+            <table class="stats-table">
+                <thead>
+                    <tr>
+                        <th>Quartier</th>
+                        <th>Annonces</th>
+                        <th>Réservations</th>
+                        <th>Revenus</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in properties_by_quartier %}
+                    <tr>
+                        <td><i class="fas fa-map-marker-alt" style="color: var(--orange);"></i> {{ item.quartier }}</td>
+                        <td>{{ item.count }}</td>
+                        <td>{{ item.total_bookings|default:0 }}</td>
+                        <td><strong style="color: var(--green);">{{ item.total_revenue|default:0|floatformat:0 }} FCFA</strong></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="empty-table">
+                            <i class="fas fa-map"></i>
+                            <p>Aucune donnée disponible</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{{ monthly_data|json_script:"monthly-data" }}
+{{ booking_statuses_data|json_script:"booking-statuses" }}
+{{ rating_distribution_data|json_script:"rating-distribution" }}
+{{ properties_by_type_data|json_script:"properties-by-type" }}
+{{ properties_by_quartier_data|json_script:"properties-by-quartier" }}
+<script>
+    // ========================================
+    // DONNÉES DEPUIS DJANGO
+    // ========================================
+    const monthlyData = JSON.parse(document.getElementById('monthly-data').textContent);
+    const bookingStatuses = JSON.parse(document.getElementById('booking-statuses').textContent);
+    const ratingDistribution = JSON.parse(document.getElementById('rating-distribution').textContent);
+    const propertiesByType = JSON.parse(document.getElementById('properties-by-type').textContent);
+    const propertiesByQuartier = JSON.parse(document.getElementById('properties-by-quartier').textContent);
+
+    // ========================================
+    // COULEURS
+    // ========================================
+    const colors = {
+        purple: '#7625d8',
+        purpleLight: '#b477ff',
+        orange: '#ff9700',
+        green: '#2ecc71',
+        blue: '#3498db',
+        red: '#e74c3c',
+        yellow: '#f1c40f',
+        pink: '#e91e63',
+        gray: '#aaa2b5',
+    };
+
+    // ========================================
+    // 1. GRAPHIQUE PRINCIPAL : REVENUS ET RÉSERVATIONS
+    // ========================================
+    const revenueCtx = document.getElementById('revenueChart');
+    if (revenueCtx) {
+        new Chart(revenueCtx, {
+            type: 'line',
+            data: {
+                labels: monthlyData.map(d => d.full_label),
+                datasets: [
+                    {
+                        label: 'Revenus (FCFA)',
+                        data: monthlyData.map(d => d.revenue),
+                        borderColor: colors.purple,
+                        backgroundColor: 'rgba(118, 37, 216, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true,
+                        yAxisID: 'y',
+                    },
+                    {
+                        label: 'Réservations',
+                        data: monthlyData.map(d => d.bookings),
+                        borderColor: colors.orange,
+                        backgroundColor: 'rgba(255, 151, 0, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true,
+                        yAxisID: 'y1',
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: {
+                        display: false,
+                    },
+                    tooltip: {
+                        backgroundColor: '#1d1729',
+                        titleColor: '#f6f1ff',
+                        bodyColor: '#aaa2b5',
+                        borderColor: '#352c42',
+                        borderWidth: 1,
+                        padding: 12,
+                        displayColors: true,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.datasetIndex === 0) {
+                                    label += new Intl.NumberFormat('fr-FR').format(context.parsed.y) + ' FCFA';
+                                } else {
+                                    label += context.parsed.y;
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.05)',
+                        },
+                        ticks: {
+                            color: colors.gray,
+                        }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.05)',
+                        },
+                        ticks: {
+                            color: colors.gray,
+                            callback: function(value) {
+                                return new Intl.NumberFormat('fr-FR').format(value) + ' F';
+                            }
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        grid: {
+                            drawOnChartArea: false,
+                        },
+                        ticks: {
+                            color: colors.gray,
+                            stepSize: 1,
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // ========================================
+    // 2. STATUTS DES RÉSERVATIONS (Doughnut)
+    // ========================================
+    const bookingStatusCtx = document.getElementById('bookingStatusChart');
+    if (bookingStatusCtx) {
+        new Chart(bookingStatusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['En attente', 'Confirmées', 'Terminées', 'Annulées'],
+                datasets: [{
+                    data: [
+                        bookingStatuses.pending || 0,
+                        bookingStatuses.confirmed || 0,
+                        bookingStatuses.completed || 0,
+                        bookingStatuses.cancelled || 0,
+                    ],
+                    backgroundColor: [
+                        colors.yellow,
+                        colors.green,
+                        colors.blue,
+                        colors.red,
+                    ],
+                    borderWidth: 0,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: colors.gray,
+                            padding: 15,
+                            font: {
+                                size: 12,
+                            }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#1d1729',
+                        titleColor: '#f6f1ff',
+                        bodyColor: '#aaa2b5',
+                        borderColor: '#352c42',
+                        borderWidth: 1,
+                        padding: 12,
+                    }
+                },
+                cutout: '65%',
+            }
+        });
+    }
+
+    // ========================================
+    // 3. RÉPARTITION DES NOTES (Bar)
+    // ========================================
+    const ratingCtx = document.getElementById('ratingChart');
+    if (ratingCtx) {
+        new Chart(ratingCtx, {
+            type: 'bar',
+            data: {
+                labels: ['1 ★', '2 ★', '3 ★', '4 ★', '5 ★'],
+                datasets: [{
+                    label: 'Nombre d\'avis',
+                    data: [
+                        ratingDistribution['1'] || 0,
+                        ratingDistribution['2'] || 0,
+                        ratingDistribution['3'] || 0,
+                        ratingDistribution['4'] || 0,
+                        ratingDistribution['5'] || 0,
+                    ],
+                    backgroundColor: [
+                        '#e74c3c',
+                        '#e67e22',
+                        '#f1c40f',
+                        '#2ecc71',
+                        '#27ae60',
+                    ],
+                    borderRadius: 8,
+                    borderSkipped: false,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false,
+                    },
+                    tooltip: {
+                        backgroundColor: '#1d1729',
+                        titleColor: '#f6f1ff',
+                        bodyColor: '#aaa2b5',
+                        borderColor: '#352c42',
+                        borderWidth: 1,
+                        padding: 12,
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false,
+                        },
+                        ticks: {
+                            color: colors.gray,
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.05)',
+                        },
+                        ticks: {
+                            color: colors.gray,
+                            stepSize: 1,
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // ========================================
+    // 4. TYPES DE LOGEMENTS (Pie)
+    // ========================================
+    const propertyTypeCtx = document.getElementById('propertyTypeChart');
+    if (propertyTypeCtx) {
+        new Chart(propertyTypeCtx, {
+            type: 'pie',
+            data: {
+                labels: propertiesByType.map(item => item.type),
+                datasets: [{
+                    data: propertiesByType.map(item => item.count),
+                    backgroundColor: [
+                        colors.purple,
+                        colors.orange,
+                        colors.blue,
+                        colors.green,
+                        colors.pink,
+                        colors.yellow,
+                    ],
+                    borderWidth: 0,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: colors.gray,
+                            padding: 12,
+                            font: {
+                                size: 11,
+                            }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#1d1729',
+                        titleColor: '#f6f1ff',
+                        bodyColor: '#aaa2b5',
+                        borderColor: '#352c42',
+                        borderWidth: 1,
+                        padding: 12,
+                    }
+                }
+            }
+        });
+    }
+
+    // ========================================
+    // 5. TOP QUARTIERS (Horizontal Bar)
+    // ========================================
+    const quartierCtx = document.getElementById('quartierChart');
+    if (quartierCtx && propertiesByQuartier.length > 0) {
+        new Chart(quartierCtx, {
+            type: 'bar',
+            data: {
+                labels: propertiesByQuartier.map(item => item.quartier),
+                datasets: [{
+                    label: 'Nombre d\'annonces',
+                    data: propertiesByQuartier.map(item => item.count),
+                    backgroundColor: colors.purpleLight,
+                    borderRadius: 8,
+                    borderSkipped: false,
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false,
+                    },
+                    tooltip: {
+                        backgroundColor: '#1d1729',
+                        titleColor: '#f6f1ff',
+                        bodyColor: '#aaa2b5',
+                        borderColor: '#352c42',
+                        borderWidth: 1,
+                        padding: 12,
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.05)',
+                        },
+                        ticks: {
+                            color: colors.gray,
+                            stepSize: 1,
+                        }
+                    },
+                    y: {
+                        grid: {
+                            display: false,
+                        },
+                        ticks: {
+                            color: colors.gray,
+                            font: {
+                                size: 11,
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    console.log('✅ Statistiques chargées');
+</script>
+{% endblock %}
