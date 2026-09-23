@@ -16,7 +16,8 @@ from .models import AdminActionLog
 
 from favorites.models import Favorite  
 from search.models import SearchHistory  
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
+import csv
 from properties.models import Property, PropertyImage
 from chat.models import Conversation, Message
 
@@ -134,6 +135,62 @@ def users_list(request):
         'role_filter': role_filter,
     }
     return render(request, 'dashboard/users_list.html', context)
+
+
+@login_required
+@admin_required
+def user_detail(request, user_id):
+    user_obj = get_object_or_404(User.objects.select_related('profile'), id=user_id)
+    user_type = 'admin' if user_obj.is_superuser or user_obj.is_staff else (
+        'proprietaire' if user_obj.properties.exists() else 'client'
+    )
+    verification = getattr(user_obj, 'owner_verification', None)
+
+    context = {
+        'user_obj': user_obj,
+        'user_type': user_type,
+        'verification': verification,
+        'total_properties': user_obj.properties.count(),
+    }
+    return render(request, 'dashboard/user_detail.html', context)
+
+
+@login_required
+@admin_required
+def users_export(request):
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="utilisateurs.csv"'
+    writer = csv.writer(response)
+    writer.writerow(['Nom utilisateur', 'Email', 'Actif', 'Date inscription'])
+    for user in User.objects.all().order_by('username'):
+        writer.writerow([
+            user.username,
+            user.email,
+            'Oui' if user.is_active else 'Non',
+            user.date_joined.strftime('%d/%m/%Y'),
+        ])
+    return response
+
+
+@login_required
+@admin_required
+def users_bulk_action(request):
+    if request.method == 'POST':
+        user_ids = request.POST.getlist('user_ids')
+        action = request.POST.get('action')
+        users = User.objects.filter(id__in=user_ids, is_superuser=False)
+
+        if action == 'activate':
+            users.update(is_active=True)
+            messages.success(request, 'Les utilisateurs sélectionnés ont été activés.')
+        elif action == 'deactivate':
+            users.update(is_active=False)
+            messages.success(request, 'Les utilisateurs sélectionnés ont été désactivés.')
+        elif action == 'delete':
+            users.delete()
+            messages.success(request, 'Les utilisateurs sélectionnés ont été supprimés.')
+
+    return redirect('dashboard:users_list')
 
 
 @login_required
@@ -518,7 +575,7 @@ def client_dashboard(request):
     """
     Tableau de bord du client
     URL: /dashboard/client/
-    Template: dashboard/client_dashboard.html
+    Template: dashboard/client.html
     """
     user = request.user
     
@@ -586,7 +643,7 @@ def client_dashboard(request):
         'recommended_properties': recommended_properties,
     }
     
-    return render(request, 'dashboard/client_dashboard.html', context)
+    return render(request, 'dashboard/client.html', context)
 
 @login_required
 def client_bookings(request):

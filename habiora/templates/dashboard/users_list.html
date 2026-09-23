@@ -1,0 +1,353 @@
+<!-- templates/dashboard/users_list.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Gestion des utilisateurs - Habiora Admin{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/admin.css' %}">
+<link rel="stylesheet" href="{% static 'css/users.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="users-container">
+
+    <!-- ===== EN-TÊTE ===== -->
+    <div class="users-header">
+        <div>
+            <h1>👥 Gestion des utilisateurs</h1>
+            <p class="subtitle">{{ total_users }} utilisateurs inscrits sur la plateforme</p>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'dashboard:users_export' %}" class="btn btn-outline">
+                <i class="fas fa-download"></i> Exporter CSV
+            </a>
+            <a href="{% url 'dashboard:admin_dashboard' %}" class="btn btn-outline">
+                <i class="fas fa-arrow-left"></i> Retour
+            </a>
+        </div>
+    </div>
+
+    <!-- ===== STATISTIQUES ===== -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-top">
+                <div>
+                    <div class="stat-number">{{ total_users }}</div>
+                    <div class="stat-label">Total utilisateurs</div>
+                </div>
+                <div class="stat-icon icon-purple">
+                    <i class="fas fa-users"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-top">
+                <div>
+                    <div class="stat-number">{{ total_clients }}</div>
+                    <div class="stat-label">Clients</div>
+                </div>
+                <div class="stat-icon icon-blue">
+                    <i class="fas fa-user"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-top">
+                <div>
+                    <div class="stat-number">{{ total_owners }}</div>
+                    <div class="stat-label">Propriétaires</div>
+                </div>
+                <div class="stat-icon icon-orange">
+                    <i class="fas fa-home"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-top">
+                <div>
+                    <div class="stat-number">{{ total_admins }}</div>
+                    <div class="stat-label">Admins</div>
+                </div>
+                <div class="stat-icon icon-red">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-top">
+                <div>
+                    <div class="stat-number">{{ active_users }}</div>
+                    <div class="stat-label">Actifs</div>
+                </div>
+                <div class="stat-icon icon-green">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-top">
+                <div>
+                    <div class="stat-number">{{ inactive_users }}</div>
+                    <div class="stat-label">Inactifs</div>
+                </div>
+                <div class="stat-icon icon-yellow">
+                    <i class="fas fa-ban"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== BARRE DE RECHERCHE ET FILTRES ===== -->
+    <div class="filters-section">
+        <form method="GET" class="filters-form">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input 
+                    type="text" 
+                    name="search" 
+                    placeholder="Rechercher par nom, email, téléphone..."
+                    value="{{ search }}"
+                >
+            </div>
+
+            <select name="role" class="filter-select">
+                <option value="">Tous les rôles</option>
+                <option value="client" {% if role_filter == 'client' %}selected{% endif %}>Clients</option>
+                <option value="proprietaire" {% if role_filter == 'proprietaire' %}selected{% endif %}>Propriétaires</option>
+                <option value="admin" {% if role_filter == 'admin' %}selected{% endif %}>Admins</option>
+            </select>
+
+            <select name="status" class="filter-select">
+                <option value="">Tous les statuts</option>
+                <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Actifs</option>
+                <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactifs</option>
+            </select>
+
+            <select name="verification" class="filter-select">
+                <option value="">Toutes les vérifications</option>
+                <option value="verified" {% if verification_filter == 'verified' %}selected{% endif %}>Vérifiés</option>
+                <option value="pending" {% if verification_filter == 'pending' %}selected{% endif %}>En attente</option>
+                <option value="rejected" {% if verification_filter == 'rejected' %}selected{% endif %}>Rejetés</option>
+            </select>
+
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-filter"></i> Filtrer
+            </button>
+
+            {% if search or role_filter or status_filter or verification_filter %}
+                <a href="{% url 'dashboard:users_list' %}" class="btn btn-outline">
+                    <i class="fas fa-times"></i> Réinitialiser
+                </a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- ===== ACTIONS EN MASSE ===== -->
+    <form method="POST" action="{% url 'dashboard:users_bulk_action' %}" id="bulk-form">
+        {% csrf_token %}
+        
+        <div class="bulk-actions" id="bulk-actions" style="display: none;">
+            <span><strong id="selected-count">0</strong> utilisateur(s) sélectionné(s)</span>
+            <div class="bulk-buttons">
+                <button type="submit" name="action" value="activate" class="btn-sm btn-sm-success">
+                    <i class="fas fa-check"></i> Activer
+                </button>
+                <button type="submit" name="action" value="deactivate" class="btn-sm btn-sm-warning">
+                    <i class="fas fa-ban"></i> Désactiver
+                </button>
+                <button type="submit" name="action" value="delete" class="btn-sm btn-sm-danger" onclick="return confirm('Êtes-vous sûr de vouloir supprimer ces utilisateurs ?')">
+                    <i class="fas fa-trash"></i> Supprimer
+                </button>
+            </div>
+        </div>
+
+        <!-- ===== TABLEAU DES UTILISATEURS ===== -->
+        <div class="table-container">
+            <table class="users-table">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;">
+                            <input type="checkbox" id="select-all">
+                        </th>
+                        <th>Utilisateur</th>
+                        <th>Contact</th>
+                        <th>Rôle</th>
+                        <th>Statut</th>
+                        <th>Vérification</th>
+                        <th>Inscription</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                    <tr>
+                        <td>
+                            <input type="checkbox" name="user_ids" value="{{ u.id }}" class="user-checkbox">
+                        </td>
+                        <td>
+                            <div class="user-info">
+                                <div class="user-avatar">
+                                    <span>{{ u.username|first|upper }}</span>
+                                </div>
+                                <div class="user-details">
+                                    <strong>{{ u.get_full_name|default:u.username }}</strong>
+                                    <small>@{{ u.username }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="contact-info">
+                                <small><i class="fas fa-envelope"></i> {{ u.email }}</small>
+                                {% if u.profile.phone %}
+                                    <small><i class="fas fa-phone"></i> {{ u.profile.phone }}</small>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            {% if u.is_superuser or u.is_staff %}
+                                <span class="role-badge role-admin">
+                                    <i class="fas fa-shield-alt"></i> Admin
+                                </span>
+                            {% elif u.properties.exists %}
+                                <span class="role-badge role-owner">
+                                    <i class="fas fa-home"></i> Propriétaire
+                                </span>
+                            {% else %}
+                                <span class="role-badge role-client">
+                                    <i class="fas fa-user"></i> Client
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if u.is_active %}
+                                <span class="status-badge status-active">
+                                    <i class="fas fa-check-circle"></i> Actif
+                                </span>
+                            {% else %}
+                                <span class="status-badge status-inactive">
+                                    <i class="fas fa-ban"></i> Inactif
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if u.owner_verification.status == 'approved' %}
+                                <span class="status-badge status-verified">
+                                    <i class="fas fa-check-circle"></i> Vérifié
+                                </span>
+                            {% elif u.owner_verification.status == 'pending' %}
+                                <span class="status-badge status-pending">
+                                    <i class="fas fa-clock"></i> En attente
+                                </span>
+                            {% elif u.owner_verification.status == 'rejected' %}
+                                <span class="status-badge status-rejected">
+                                    <i class="fas fa-times-circle"></i> Rejeté
+                                </span>
+                            {% else %}
+                                <span class="status-badge status-none">
+                                    —
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small>{{ u.date_joined|date:"d/m/Y" }}</small>
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <a href="{% url 'dashboard:user_detail' u.id %}" class="btn-icon" title="Voir détails">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{% url 'dashboard:user_toggle_active' u.id %}" class="btn-icon {% if u.is_active %}btn-icon-warning{% else %}btn-icon-success{% endif %}" title="{% if u.is_active %}Désactiver{% else %}Activer{% endif %}">
+                                    <i class="fas {% if u.is_active %}fa-ban{% else %}fa-check{% endif %}"></i>
+                                </a>
+                                <a href="{% url 'dashboard:user_delete' u.id %}" class="btn-icon btn-icon-danger" title="Supprimer">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="empty-table">
+                            <i class="fas fa-users"></i>
+                            <p>Aucun utilisateur trouvé</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </form>
+
+    <!-- ===== PAGINATION ===== -->
+    {% if users.has_other_pages %}
+    <div class="pagination">
+        {% if users.has_previous %}
+            <a href="?page={{ users.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if role_filter %}&role={{ role_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if verification_filter %}&verification={{ verification_filter }}{% endif %}" class="page-link">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+        {% endif %}
+
+        {% for num in users.paginator.page_range %}
+            {% if users.number == num %}
+                <span class="page-link active">{{ num }}</span>
+            {% elif num > users.number|add:'-3' and num < users.number|add:'3' %}
+                <a href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if role_filter %}&role={{ role_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if verification_filter %}&verification={{ verification_filter }}{% endif %}" class="page-link">
+                    {{ num }}
+                </a>
+            {% endif %}
+        {% endfor %}
+
+        {% if users.has_next %}
+            <a href="?page={{ users.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if role_filter %}&role={{ role_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if verification_filter %}&verification={{ verification_filter }}{% endif %}" class="page-link">
+                <i class="fas fa-chevron-right"></i>
+            </a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // ========================================
+    // SÉLECTION EN MASSE
+    // ========================================
+    const selectAll = document.getElementById('select-all');
+    const checkboxes = document.querySelectorAll('.user-checkbox');
+    const bulkActions = document.getElementById('bulk-actions');
+    const selectedCount = document.getElementById('selected-count');
+
+    function updateBulkActions() {
+        const checked = document.querySelectorAll('.user-checkbox:checked').length;
+        
+        if (checked > 0) {
+            bulkActions.style.display = 'flex';
+            selectedCount.textContent = checked;
+        } else {
+            bulkActions.style.display = 'none';
+        }
+    }
+
+    if (selectAll) {
+        selectAll.addEventListener('change', function() {
+            checkboxes.forEach(cb => {
+                cb.checked = this.checked;
+            });
+            updateBulkActions();
+        });
+    }
+
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', updateBulkActions);
+    });
+</script>
+{% endblock %}
