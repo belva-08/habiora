@@ -18,10 +18,10 @@ class AdminActionLog(models.Model):
         ('incident_resolve', 'Résolution signalement'),
     ]
     
-    admin = models.ForeignKey(User, on_delete=models.CASCADE, related_name='admin_actions')
+    admin = models.ForeignKey(User, on_delete=models.CASCADE, related_name='dashboard_admin_actions')
     action_type = models.CharField(max_length=30, choices=ACTION_TYPES)
     description = models.TextField()
-    target_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='targeted_actions')
+    target_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='dashboard_targeted_actions')
     target_property = models.ForeignKey(Property, on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     

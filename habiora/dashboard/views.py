@@ -12,17 +12,15 @@ from bookings.models import Booking
 from reviews.models import Review, IncidentReport
 from accounts.models import UserProfile, OwnerVerification
 from notifications.models import Notification
-from .models import AdminActionLog
-
-from favorites.models import Favorite  
-from search.models import SearchHistory  
 from django.http import JsonResponse
-from properties.models import Property, PropertyImage
+from favorites.models import Favorite
+from search.models import SearchHistory
 from chat.models import Conversation, Message
 from calendar import monthrange
 import json
- 
- 
+
+from django.core.paginator import Paginator
+from .models import AdminActionLog
 def admin_required(view_func):
     """Décorateur pour restreindre aux administrateurs"""
     def wrapper(request, *args, **kwargs):
@@ -79,7 +77,7 @@ def admin_dashboard(request):
     pending_incidents = IncidentReport.objects.filter(status='pending').order_by('-created_at')[:10]
     pending_incidents_count = pending_incidents.count()
     
-    recent_activities = AdminActionLog.objects.all()[:20]
+    recent_activities = AdminActionLog.objects.select_related('admin').order_by('-created_at')[:20]
     
     notifications = Notification.objects.filter(user=request.user, is_read=False)[:10]
     
@@ -858,16 +856,16 @@ def owner_dashboard(request):
     pending_properties = Property.objects.filter(owner=user, is_approved=False).count()
     
     # Réservations
-    total_bookings = Booking.objects.filter(owner=user).count()
-    pending_bookings = Booking.objects.filter(owner=user, status='pending').count()
-    confirmed_bookings = Booking.objects.filter(owner=user, status='confirmed').count()
-    completed_bookings = Booking.objects.filter(owner=user, status='completed').count()
+    total_bookings = Booking.objects.filter(property__owner=user).count()
+    pending_bookings = Booking.objects.filter(property__owner=user, status='pending').count()
+    confirmed_bookings = Booking.objects.filter(property__owner=user, status='confirmed').count()
+    completed_bookings = Booking.objects.filter(property__owner=user, status='completed').count()
     
     # Revenus
     total_revenue = Booking.objects.filter(
-        owner=user,
+        property__owner=user,
         status__in=['confirmed', 'completed']
-    ).aggregate(total=Sum('total_price'))['total'] or 0
+    ).aggregate(total=Sum('property__price'))['total'] or 0
     
     # Avis
     properties_ids = Property.objects.filter(owner=user).values_list('id', flat=True)
@@ -880,7 +878,7 @@ def owner_dashboard(request):
     recent_properties = Property.objects.filter(owner=user).order_by('-created_at')[:5]
     
     # ===== RÉSERVATIONS RÉCENTES =====
-    recent_bookings = Booking.objects.filter(owner=user).order_by('-created_at')[:5]
+    recent_bookings = Booking.objects.filter(property__owner=user).order_by('-created_at')[:5]
     
     # ===== NOTIFICATIONS =====
     unread_notifications = Notification.objects.filter(user=user, is_read=False).count()
@@ -1207,7 +1205,7 @@ def owner_bookings(request):
     URL: /dashboard/owner/bookings/
     Template: dashboard/owner_bookings.html
     """
-    bookings = Booking.objects.filter(owner=request.user).order_by('-created_at')
+    bookings = Booking.objects.filter(property__owner=request.user).order_by('-created_at')
     
     # Filtres
     status_filter = request.GET.get('status')
@@ -1229,7 +1227,7 @@ def owner_booking_detail(request, booking_id):
     URL: /dashboard/owner/booking/<int:booking_id>/
     Template: dashboard/owner_booking_detail.html
     """
-    booking = get_object_or_404(Booking, id=booking_id, owner=request.user)
+    booking = get_object_or_404(Booking, id=booking_id, property__owner=request.user)
     
     context = {
         'booking': booking,
@@ -1244,7 +1242,7 @@ def owner_booking_process(request, booking_id):
     Accepter ou refuser une réservation
     URL: /dashboard/owner/booking/<int:booking_id>/process/
     """
-    booking = get_object_or_404(Booking, id=booking_id, owner=request.user)
+    booking = get_object_or_404(Booking, id=booking_id, property__owner=request.user)
     
     if booking.status != 'pending':
         messages.warning(request, "Cette réservation a déjà été traitée.")
@@ -1256,7 +1254,6 @@ def owner_booking_process(request, booking_id):
         
         if action == 'accept':
             booking.status = 'confirmed'
-            booking.owner_response = message_owner
             booking.save()
             
             # Notification au client
@@ -1272,7 +1269,6 @@ def owner_booking_process(request, booking_id):
             
         elif action == 'reject':
             booking.status = 'refused'
-            booking.owner_response = message_owner
             booking.save()
             
             # Notification au client
@@ -1363,11 +1359,11 @@ def owner_statistics(request):
         ).count()
         
         revenue = Booking.objects.filter(
-            owner=user,
+            property__owner=user,
             status__in=['confirmed', 'completed'],
             created_at__gte=start_date,
             created_at__lt=end_date
-        ).aggregate(total=Sum('total_price'))['total'] or 0
+        ).aggregate(total=Sum('property__price'))['total'] or 0
         
         bookings_by_month.append({
             'month': start_date.strftime('%b %Y'),
@@ -1507,25 +1503,25 @@ def owner_statistics(request):
     pending_properties = Property.objects.filter(owner=user, is_approved=False).count()
     
     # Réservations
-    total_bookings = Booking.objects.filter(owner=user).count()
-    pending_bookings = Booking.objects.filter(owner=user, status='pending').count()
-    confirmed_bookings = Booking.objects.filter(owner=user, status='confirmed').count()
-    completed_bookings = Booking.objects.filter(owner=user, status='completed').count()
-    cancelled_bookings = Booking.objects.filter(owner=user, status='cancelled').count()
+    total_bookings = Booking.objects.filter(property__owner=user).count()
+    pending_bookings = Booking.objects.filter(property__owner=user, status='pending').count()
+    confirmed_bookings = Booking.objects.filter(property__owner=user, status='confirmed').count()
+    completed_bookings = Booking.objects.filter(property__owner=user, status='completed').count()
+    cancelled_bookings = Booking.objects.filter(property__owner=user, status='cancelled').count()
     
     # Revenus
     total_revenue = Booking.objects.filter(
-        owner=user,
+        property__owner=user,
         status__in=['confirmed', 'completed']
-    ).aggregate(total=Sum('total_price'))['total'] or 0
+    ).aggregate(total=Sum('property__price'))['total'] or 0
     
     # Revenus du mois en cours
     current_month_start = timezone.now().replace(day=1, hour=0, minute=0, second=0)
     monthly_revenue = Booking.objects.filter(
-        owner=user,
+        property__owner=user,
         status__in=['confirmed', 'completed'],
         created_at__gte=current_month_start
-    ).aggregate(total=Sum('total_price'))['total'] or 0
+    ).aggregate(total=Sum('property__price'))['total'] or 0
     
     # Avis
     properties_ids = Property.objects.filter(owner=user).values_list('id', flat=True)
@@ -1574,18 +1570,18 @@ def owner_statistics(request):
         
         # Réservations du mois
         bookings_count = Booking.objects.filter(
-            owner=user,
+            property__owner=user,
             created_at__gte=start_date,
             created_at__lte=end_date
         ).count()
         
         # Revenus du mois
         revenue = Booking.objects.filter(
-            owner=user,
+            property__owner=user,
             status__in=['confirmed', 'completed'],
             created_at__gte=start_date,
             created_at__lte=end_date
-        ).aggregate(total=Sum('total_price'))['total'] or 0
+        ).aggregate(total=Sum('property__price'))['total'] or 0
         
         # Vues du mois (approximatif)
         views = Property.objects.filter(
@@ -1615,7 +1611,7 @@ def owner_statistics(request):
         owner=user
     ).annotate(
         booking_count=Count('bookings'),
-        total_revenue=Sum('bookings__total_price', filter=Q(bookings__status__in=['confirmed', 'completed'])),
+        total_revenue=Sum('bookings__property__price', filter=Q(bookings__status__in=['confirmed', 'completed'])),
         review_count=Count('reviews'),
         avg_rating=Avg('reviews__rating'),
     ).order_by('-booking_count')[:5]
@@ -1662,7 +1658,7 @@ def owner_statistics(request):
     ).values('quartier').annotate(
         count=Count('id'),
         total_bookings=Count('bookings'),
-        total_revenue=Sum('bookings__total_price', filter=Q(bookings__status__in=['confirmed', 'completed'])),
+        total_revenue=Sum('bookings__property__price', filter=Q(bookings__status__in=['confirmed', 'completed'])),
     ).order_by('-count')[:10]
 
     properties_by_quartier_data = [
@@ -1752,4 +1748,854 @@ def owner_statistics(request):
     }
     
     return render(request, 'dashboard/owner_statistics.html', context)
+
+    # dashboard/views.py - AJOUTER CETTE FONCTION
+
+
+@login_required
+def admin_statistics(request):
+    """
+    Statistiques détaillées pour l'administrateur
+    URL: /dashboard/admin/statistiques/
+    Template: dashboard/admin_statistics.html
+    """
+    # Vérifier que l'utilisateur est admin
+    if not request.user.is_superuser and not request.user.is_staff:
+        messages.error(request, "Vous n'avez pas les droits d'administrateur.")
+        return redirect('home')
+    
+    # ============================================
+    # 1. STATISTIQUES GÉNÉRALES
+    # ============================================
+    
+    # Utilisateurs
+    total_users = User.objects.count()
+    total_clients = User.objects.filter(is_superuser=False, is_staff=False).count()
+    total_proprietaires = User.objects.filter(is_superuser=False, is_staff=False).count()  # À adapter avec votre champ role
+    total_admins = User.objects.filter(Q(is_superuser=True) | Q(is_staff=True)).count()
+    
+    # Utilisateurs actifs (derniers 7 jours)
+    week_ago = timezone.now() - timedelta(days=7)
+    active_users = User.objects.filter(last_login__gte=week_ago).count()
+    
+    # Nouveaux utilisateurs ce mois
+    current_month_start = timezone.now().replace(day=1, hour=0, minute=0, second=0)
+    new_users_month = User.objects.filter(date_joined__gte=current_month_start).count()
+    
+    # Annonces
+    total_properties = Property.objects.count()
+    approved_properties = Property.objects.filter(is_approved=True).count()
+    pending_properties = Property.objects.filter(is_approved=False).count()
+    active_properties = Property.objects.filter(is_approved=True, is_active=True).count()
+    inactive_properties = Property.objects.filter(is_approved=True, is_active=False).count()
+    
+    # Réservations
+    total_bookings = Booking.objects.count()
+    pending_bookings = Booking.objects.filter(status='pending').count()
+    confirmed_bookings = Booking.objects.filter(status='confirmed').count()
+    completed_bookings = Booking.objects.filter(status='completed').count()
+    cancelled_bookings = Booking.objects.filter(status='cancelled').count()
+    refused_bookings = Booking.objects.filter(status='refused').count()
+    
+    # Revenus totaux (somme de toutes les réservations confirmées/terminées)
+    total_revenue = Booking.objects.filter(
+        status__in=['confirmed', 'completed']
+    ).aggregate(total=Sum('property__price'))['total'] or 0
+    
+    # Revenus du mois
+    monthly_revenue = Booking.objects.filter(
+        status__in=['confirmed', 'completed'],
+        created_at__gte=current_month_start
+    ).aggregate(total=Sum('property__price'))['total'] or 0
+    
+    # Avis
+    total_reviews = Review.objects.count()
+    avg_rating = Review.objects.aggregate(avg=Avg('rating'))['avg'] or 0
+    
+    # Vérifications
+    total_verifications = OwnerVerification.objects.count()
+    pending_verifications = OwnerVerification.objects.filter(status='pending').count()
+    approved_verifications = OwnerVerification.objects.filter(status='approved').count()
+    rejected_verifications = OwnerVerification.objects.filter(status='rejected').count()
+    
+    # Signalements
+    total_incidents = IncidentReport.objects.count()
+    pending_incidents = IncidentReport.objects.filter(status='pending').count()
+    resolved_incidents = IncidentReport.objects.filter(status='resolved').count()
+    
+    # Vues totales
+    total_views = Property.objects.aggregate(total=Sum('views_count'))['total'] or 0
+    
+    # ============================================
+    # 2. ÉVOLUTION MENSUELLE (6 derniers mois)
+    # ============================================
+    
+    monthly_data = []
+    month_names = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 
+                   'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc']
+    
+    for i in range(5, -1, -1):
+        month = timezone.now().month - i
+        year = timezone.now().year
+        
+        if month <= 0:
+            month += 12
+            year -= 1
+        
+        start_date = timezone.datetime(year, month, 1)
+        last_day = monthrange(year, month)[1]
+        end_date = timezone.datetime(year, month, last_day, 23, 59, 59)
+        
+        # Nouveaux utilisateurs
+        users_count = User.objects.filter(
+            date_joined__gte=start_date,
+            date_joined__lte=end_date
+        ).count()
+        
+        # Nouvelles annonces
+        properties_count = Property.objects.filter(
+            created_at__gte=start_date,
+            created_at__lte=end_date
+        ).count()
+        
+        # Réservations
+        bookings_count = Booking.objects.filter(
+            created_at__gte=start_date,
+            created_at__lte=end_date
+        ).count()
+        
+        # Revenus
+        revenue = Booking.objects.filter(
+            status__in=['confirmed', 'completed'],
+            created_at__gte=start_date,
+            created_at__lte=end_date
+        ).aggregate(total=Sum('property__price'))['total'] or 0
+        
+        monthly_data.append({
+            'month': month_names[month - 1],
+            'year': year,
+            'full_label': f"{month_names[month - 1]} {year}",
+            'users': users_count,
+            'properties': properties_count,
+            'bookings': bookings_count,
+            'revenue': float(revenue),
+        })
+    
+    # ============================================
+    # 3. TOP QUARTIERS
+    # ============================================
+    
+    top_quartiers = Property.objects.filter(
+        is_approved=True
+    ).values('quartier').annotate(
+        count=Count('id'),
+        total_bookings=Count('bookings'),
+        total_revenue=Sum('bookings__property__price', filter=Q(bookings__status__in=['confirmed', 'completed']))
+    ).order_by('-count')[:10]
+    
+    top_quartiers_data = []
+    for q in top_quartiers:
+        top_quartiers_data.append({
+            'quartier': q['quartier'],
+            'count': q['count'],
+            'bookings': q['total_bookings'],
+            'revenue': float(q['total_revenue'] or 0),
+        })
+    
+    # ============================================
+    # 4. TOP PROPRIÉTAIRES
+    # ============================================
+    
+    top_owners = User.objects.filter(
+        properties__isnull=False
+    ).annotate(
+        property_count=Count('properties', distinct=True),
+        booking_count=Count('properties__bookings', distinct=True),
+        total_revenue=Sum('properties__bookings__property__price', 
+                         filter=Q(properties__bookings__status__in=['confirmed', 'completed'])),
+    ).order_by('-property_count')[:10]
+    
+    top_owners_data = []
+    for owner in top_owners:
+        top_owners_data.append({
+            'id': owner.id,
+            'username': owner.username,
+            'email': owner.email,
+            'properties': owner.property_count,
+            'bookings': owner.booking_count,
+            'revenue': float(owner.total_revenue or 0),
+        })
+    
+    # ============================================
+    # 5. TOP ANNONCES
+    # ============================================
+    
+    top_properties = Property.objects.filter(
+        is_approved=True
+    ).annotate(
+        booking_count=Count('bookings'),
+        review_count=Count('reviews'),
+        avg_rating=Avg('reviews__rating'),
+    ).order_by('-views_count')[:10]
+    
+    top_properties_data = []
+    for prop in top_properties:
+        top_properties_data.append({
+            'id': prop.id,
+            'title': prop.title,
+            'quartier': prop.quartier,
+            'owner': prop.owner.username,
+            'price': int(prop.price),
+            'views': prop.views_count,
+            'bookings': prop.booking_count,
+            'rating': round(prop.avg_rating or 0, 1),
+        })
+    
+    # ============================================
+    # 6. RÉPARTITION DES RÔLES
+    # ============================================
+    
+    roles_data = {
+        'clients': total_clients,
+        'proprietaires': total_proprietaires,
+        'admins': total_admins,
+    }
+    
+    # ============================================
+    # 7. STATUTS DES ANNONCES
+    # ============================================
+    
+    properties_status_data = {
+        'approved': approved_properties,
+        'pending': pending_properties,
+        'active': active_properties,
+        'inactive': inactive_properties,
+    }
+    
+    # ============================================
+    # 8. STATUTS DES RÉSERVATIONS
+    # ============================================
+    
+    bookings_status_data = {
+        'pending': pending_bookings,
+        'confirmed': confirmed_bookings,
+        'completed': completed_bookings,
+        'cancelled': cancelled_bookings,
+        'refused': refused_bookings,
+    }
+    
+    # ============================================
+    # 9. STATUTS DES VÉRIFICATIONS
+    # ============================================
+    
+    verifications_status_data = {
+        'pending': pending_verifications,
+        'approved': approved_verifications,
+        'rejected': rejected_verifications,
+    }
+    
+    # ============================================
+    # 10. RÉPARTITION DES NOTES
+    # ============================================
+    
+    rating_distribution = {}
+    for i in range(1, 6):
+        rating_distribution[i] = Review.objects.filter(rating=i).count()
+    
+    # ============================================
+    # 11. TYPES DE LOGEMENTS
+    # ============================================
+    
+    type_names = {
+        'appartement': 'Appartement',
+        'maison': 'Maison',
+        'studio': 'Studio',
+        'duplex': 'Duplex',
+        'villa': 'Villa',
+        'chambre': 'Chambre',
+    }
+    
+    properties_by_type = Property.objects.filter(
+        is_approved=True
+    ).values('property_type').annotate(
+        count=Count('id'),
+        total_bookings=Count('bookings'),
+    ).order_by('-count')
+    
+    properties_by_type_data = []
+    for item in properties_by_type:
+        properties_by_type_data.append({
+            'type': type_names.get(item['property_type'], item['property_type']),
+            'count': item['count'],
+            'bookings': item['total_bookings'],
+        })
+    
+    # ============================================
+    # CONTEXTE
+    # ============================================
+    
+    context = {
+        # Statistiques générales
+        'total_users': total_users,
+        'total_clients': total_clients,
+        'total_proprietaires': total_proprietaires,
+        'total_admins': total_admins,
+        'active_users': active_users,
+        'new_users_month': new_users_month,
+        
+        'total_properties': total_properties,
+        'approved_properties': approved_properties,
+        'pending_properties': pending_properties,
+        'active_properties': active_properties,
+        'inactive_properties': inactive_properties,
+        
+        'total_bookings': total_bookings,
+        'pending_bookings': pending_bookings,
+        'confirmed_bookings': confirmed_bookings,
+        'completed_bookings': completed_bookings,
+        'cancelled_bookings': cancelled_bookings,
+        'refused_bookings': refused_bookings,
+        
+        'total_revenue': total_revenue,
+        'monthly_revenue': monthly_revenue,
+        
+        'total_reviews': total_reviews,
+        'avg_rating': round(avg_rating, 1),
+        
+        'total_verifications': total_verifications,
+        'pending_verifications': pending_verifications,
+        'approved_verifications': approved_verifications,
+        'rejected_verifications': rejected_verifications,
+        
+        'total_incidents': total_incidents,
+        'pending_incidents': pending_incidents,
+        'resolved_incidents': resolved_incidents,
+        
+        'total_views': total_views,
+        
+        # Données pour graphiques (JSON)
+        'monthly_data_json': json.dumps(monthly_data),
+        'top_quartiers_json': json.dumps(top_quartiers_data),
+        'top_owners_json': json.dumps(top_owners_data),
+        'roles_data_json': json.dumps(roles_data),
+        'properties_status_json': json.dumps(properties_status_data),
+        'bookings_status_json': json.dumps(bookings_status_data),
+        'verifications_status_json': json.dumps(verifications_status_data),
+        'rating_distribution_json': json.dumps(rating_distribution),
+        'properties_by_type_json': json.dumps(properties_by_type_data),
+        
+        # Listes pour tableaux
+        'top_quartiers': top_quartiers_data,
+        'top_owners': top_owners_data,
+        'top_properties': top_properties_data,
+        'rating_distribution': rating_distribution,
+        'properties_by_type': properties_by_type_data,
+    }
+    
+    return render(request, 'dashboard/admin_statistics.html', context)
+
+   
+
+
+# ============================================
+# DÉCORATEUR ADMIN
+# ============================================
+
+def admin_required(view_func):
+    """Décorateur pour restreindre aux administrateurs"""
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            messages.error(request, "Veuillez vous connecter.")
+            return redirect('accounts:login')
+        
+        if not request.user.is_superuser and not request.user.is_staff:
+            messages.error(request, "Vous n'avez pas les droits d'administrateur.")
+            return redirect('home')
+        
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
+# ============================================
+# LISTE DES UTILISATEURS
+# ============================================
+
+@login_required
+@admin_required
+def users_list(request):
+    """
+    Liste des utilisateurs avec filtres et recherche
+    URL: /dashboard/admin/utilisateurs/
+    Template: dashboard/users_list.html
+    """
+    # ===== REQUÊTE DE BASE =====
+    users = User.objects.all().select_related('profile').order_by('-date_joined')
+    
+    # ===== RECHERCHE =====
+    search = request.GET.get('search', '').strip()
+    if search:
+        users = users.filter(
+            Q(username__icontains=search) |
+            Q(email__icontains=search) |
+            Q(first_name__icontains=search) |
+            Q(last_name__icontains=search) |
+            Q(profile__phone_number__icontains=search)
+        )
+    
+    # ===== FILTRES =====
+    role_filter = request.GET.get('role', '')
+    if role_filter == 'client':
+        users = users.filter(is_superuser=False, is_staff=False)
+    elif role_filter == 'proprietaire':
+        users = users.filter(properties__isnull=False).distinct()
+    elif role_filter == 'admin':
+        users = users.filter(Q(is_superuser=True) | Q(is_staff=True))
+    
+    # Statut actif/inactif
+    status_filter = request.GET.get('status', '')
+    if status_filter == 'active':
+        users = users.filter(is_active=True)
+    elif status_filter == 'inactive':
+        users = users.filter(is_active=False)
+    
+    # Vérification
+    verification_filter = request.GET.get('verification', '')
+    if verification_filter == 'verified':
+        users = users.filter(profile__is_verified=True)
+    elif verification_filter == 'pending':
+        users = users.filter(profile__verification_status='pending')
+    elif verification_filter == 'rejected':
+        users = users.filter(profile__verification_status='rejected')
+    
+    # ===== STATISTIQUES =====
+    total_users = User.objects.count()
+    total_clients = User.objects.filter(is_superuser=False, is_staff=False).count()
+    total_owners = User.objects.filter(properties__isnull=False).distinct().count()
+    total_admins = User.objects.filter(Q(is_superuser=True) | Q(is_staff=True)).count()
+    active_users = User.objects.filter(is_active=True).count()
+    inactive_users = User.objects.filter(is_active=False).count()
+    
+    # ===== PAGINATION =====
+    paginator = Paginator(users, 20)  # 20 utilisateurs par page
+    page = request.GET.get('page', 1)
+    
+    try:
+        users_page = paginator.page(page)
+    except:
+        users_page = paginator.page(1)
+    
+    context = {
+        'users': users_page,
+        'search': search,
+        'role_filter': role_filter,
+        'status_filter': status_filter,
+        'verification_filter': verification_filter,
+        'total_users': total_users,
+        'total_clients': total_clients,
+        'total_owners': total_owners,
+        'total_admins': total_admins,
+        'active_users': active_users,
+        'inactive_users': inactive_users,
+        'paginator': paginator,
+    }
+    return render(request, 'dashboard/users_list.html', context)
+
+
+# ============================================
+# DÉTAIL D'UN UTILISATEUR
+# ============================================
+
+@login_required
+@admin_required
+def user_detail(request, user_id):
+    """
+    Détail d'un utilisateur
+    URL: /dashboard/admin/utilisateur/<int:user_id>/
+    Template: dashboard/user_detail.html
+    """
+    user_obj = get_object_or_404(User, id=user_id)
+    
+    # Statistiques de l'utilisateur
+    if user_obj.is_superuser or user_obj.is_staff:
+        user_type = 'admin'
+    elif user_obj.properties.exists():
+        user_type = 'proprietaire'
+    else:
+        user_type = 'client'
+    
+    # Propriétés (si propriétaire)
+    properties = Property.objects.filter(owner=user_obj).order_by('-created_at')
+    total_properties = properties.count()
+    
+    # Réservations (si client)
+    bookings = Booking.objects.filter(client=user_obj).order_by('-created_at')
+    total_bookings = bookings.count()
+    
+    # Réservations en tant que propriétaire
+    owner_bookings = Booking.objects.filter(owner=user_obj).order_by('-created_at')
+    total_owner_bookings = owner_bookings.count()
+    
+    # Revenus (si propriétaire)
+    total_revenue = Booking.objects.filter(
+        owner=user_obj,
+        status__in=['confirmed', 'completed']
+    ).aggregate(total=Sum('total_price'))['total'] or 0
+    
+    # Avis reçus
+    properties_ids = properties.values_list('id', flat=True)
+    reviews = Review.objects.filter(property_id__in=properties_ids)
+    total_reviews = reviews.count()
+    avg_rating = reviews.aggregate(avg=Avg('rating'))['avg'] or 0
+    
+    # Vérification
+    try:
+        verification = OwnerVerification.objects.get(user=user_obj)
+    except OwnerVerification.DoesNotExist:
+        verification = None
+    
+    # Actions récentes
+    actions = AdminActionLog.objects.filter(target_user=user_obj)[:10]
+    
+    context = {
+        'user_obj': user_obj,
+        'user_type': user_type,
+        'properties': properties[:10],
+        'total_properties': total_properties,
+        'bookings': bookings[:10],
+        'total_bookings': total_bookings,
+        'owner_bookings': owner_bookings[:10],
+        'total_owner_bookings': total_owner_bookings,
+        'total_revenue': total_revenue,
+        'reviews': reviews[:10],
+        'total_reviews': total_reviews,
+        'avg_rating': round(avg_rating, 1),
+        'verification': verification,
+        'actions': actions,
+    }
+    return render(request, 'dashboard/user_detail.html', context)
+
+
+# ============================================
+# ACTIVER/DÉSACTIVER UN UTILISATEUR
+# ============================================
+
+@login_required
+@admin_required
+def user_toggle_active(request, user_id):
+    """
+    Activer/Désactiver un utilisateur
+    URL: /dashboard/admin/utilisateur/<int:user_id>/activer/
+    """
+    user_obj = get_object_or_404(User, id=user_id)
+    
+    # Empêcher la désactivation de soi-même
+    if user_obj == request.user:
+        messages.error(request, "Vous ne pouvez pas désactiver votre propre compte.")
+        return redirect('dashboard:users_list')
+    
+    # Empêcher la désactivation des superutilisateurs
+    if user_obj.is_superuser and not request.user.is_superuser:
+        messages.error(request, "Vous ne pouvez pas désactiver un superutilisateur.")
+        return redirect('dashboard:users_list')
+    
+    user_obj.is_active = not user_obj.is_active
+    user_obj.save()
+    
+    status = "activé" if user_obj.is_active else "désactivé"
+    messages.success(request, f"L'utilisateur {user_obj.username} a été {status}.")
+    
+    # Journalisation
+    AdminActionLog.objects.create(
+        admin=request.user,
+        action_type='user_activate' if user_obj.is_active else 'user_deactivate',
+        description=f"Utilisateur {user_obj.username} {status}",
+        target_user=user_obj
+    )
+    
+    # Notification à l'utilisateur
+    Notification.objects.create(
+        user=user_obj,
+        type='system',
+        title=f'Compte {status}',
+        message=f"Votre compte a été {status} par un administrateur.",
+        link='/'
+    )
+    
+    return redirect('dashboard:users_list')
+
+
+# ============================================
+# SUPPRIMER UN UTILISATEUR
+# ============================================
+
+@login_required
+@admin_required
+def user_delete(request, user_id):
+    """
+    Supprimer un utilisateur
+    URL: /dashboard/admin/utilisateur/<int:user_id>/supprimer/
+    """
+    user_obj = get_object_or_404(User, id=user_id)
+    
+    # Empêcher la suppression de soi-même
+    if user_obj == request.user:
+        messages.error(request, "Vous ne pouvez pas supprimer votre propre compte.")
+        return redirect('dashboard:users_list')
+    
+    # Empêcher la suppression des superutilisateurs
+    if user_obj.is_superuser and not request.user.is_superuser:
+        messages.error(request, "Vous ne pouvez pas supprimer un superutilisateur.")
+        return redirect('dashboard:users_list')
+    
+    if request.method == 'POST':
+        username = user_obj.username
+        email = user_obj.email
+        
+        # Suppression
+        user_obj.delete()
+        
+        # Journalisation
+        AdminActionLog.objects.create(
+            admin=request.user,
+            action_type='user_delete',
+            description=f"Utilisateur {username} ({email}) supprimé",
+            target_user=None
+        )
+        
+        messages.success(request, f"L'utilisateur {username} a été supprimé définitivement.")
+        return redirect('dashboard:users_list')
+    
+    context = {
+        'user_obj': user_obj,
+    }
+    return render(request, 'dashboard/user_delete.html', context)
+
+
+# ============================================
+# VÉRIFIER UN PROPRIÉTAIRE
+# ============================================
+
+@login_required
+@admin_required
+def user_verify(request, user_id):
+    """
+    Vérifier un propriétaire
+    URL: /dashboard/admin/utilisateur/<int:user_id>/verifier/
+    Template: dashboard/user_verify.html
+    """
+    user_obj = get_object_or_404(User, id=user_id)
+    
+    try:
+        verification = OwnerVerification.objects.get(user=user_obj)
+    except OwnerVerification.DoesNotExist:
+        messages.error(request, "Aucune demande de vérification trouvée pour cet utilisateur.")
+        return redirect('dashboard:user_detail', user_id=user_id)
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        notes = request.POST.get('notes', '')
+        
+        if action == 'approve':
+            verification.status = 'approved'
+            verification.verified_at = timezone.now()
+            verification.admin_notes = notes
+            verification.save()
+            
+            # Mettre à jour le profil
+            if hasattr(user_obj, 'profile'):
+                user_obj.profile.is_verified = True
+                user_obj.profile.verification_status = 'approved'
+                user_obj.profile.save()
+            
+            # Notification
+            Notification.objects.create(
+                user=user_obj,
+                type='owner_verification',
+                title='✅ Vérification approuvée',
+                message="Félicitations ! Votre compte propriétaire a été vérifié avec succès.",
+                link='/dashboard/proprietaire/'
+            )
+            
+            # Journalisation
+            AdminActionLog.objects.create(
+                admin=request.user,
+                action_type='user_verify',
+                description=f"Propriétaire {user_obj.username} vérifié",
+                target_user=user_obj
+            )
+            
+            messages.success(request, f"Le propriétaire {user_obj.username} a été vérifié.")
+            
+        elif action == 'reject':
+            verification.status = 'rejected'
+            verification.verified_at = timezone.now()
+            verification.admin_notes = notes
+            verification.save()
+            
+            # Mettre à jour le profil
+            if hasattr(user_obj, 'profile'):
+                user_obj.profile.is_verified = False
+                user_obj.profile.verification_status = 'rejected'
+                user_obj.profile.save()
+            
+            # Notification
+            Notification.objects.create(
+                user=user_obj,
+                type='owner_verification',
+                title='❌ Vérification rejetée',
+                message=f"Votre demande de vérification a été rejetée. Raison : {notes if notes else 'Documents non conformes'}",
+                link='/accounts/verify-owner/'
+            )
+            
+            # Journalisation
+            AdminActionLog.objects.create(
+                admin=request.user,
+                action_type='user_reject',
+                description=f"Propriétaire {user_obj.username} rejeté",
+                target_user=user_obj
+            )
+            
+            messages.info(request, f"La vérification de {user_obj.username} a été rejetée.")
+        
+        return redirect('dashboard:user_detail', user_id=user_id)
+    
+    context = {
+        'user_obj': user_obj,
+        'verification': verification,
+    }
+    return render(request, 'dashboard/user_verify.html', context)
+
+
+# ============================================
+# STATISTIQUES PAR UTILISATEUR (AJAX)
+# ============================================
+
+@login_required
+@admin_required
+def user_stats_ajax(request, user_id):
+    """
+    Statistiques d'un utilisateur (AJAX)
+    URL: /dashboard/admin/utilisateur/<int:user_id>/stats/
+    """
+    user_obj = get_object_or_404(User, id=user_id)
+    
+    # Propriétés
+    properties_count = Property.objects.filter(owner=user_obj).count()
+    
+    # Réservations
+    bookings_count = Booking.objects.filter(client=user_obj).count()
+    owner_bookings_count = Booking.objects.filter(owner=user_obj).count()
+    
+    # Revenus
+    revenue = Booking.objects.filter(
+        owner=user_obj,
+        status__in=['confirmed', 'completed']
+    ).aggregate(total=Sum('total_price'))['total'] or 0
+    
+    # Avis
+    properties_ids = Property.objects.filter(owner=user_obj).values_list('id', flat=True)
+    reviews_count = Review.objects.filter(property_id__in=properties_ids).count()
+    avg_rating = Review.objects.filter(property_id__in=properties_ids).aggregate(
+        avg=Avg('rating')
+    )['avg'] or 0
+    
+    return JsonResponse({
+        'properties': properties_count,
+        'bookings': bookings_count,
+        'owner_bookings': owner_bookings_count,
+        'revenue': float(revenue),
+        'reviews': reviews_count,
+        'avg_rating': round(avg_rating, 1),
+    })
+
+
+# ============================================
+# ACTIONS EN MASSE
+# ============================================
+
+@login_required
+@admin_required
+def users_bulk_action(request):
+    """
+    Actions en masse sur les utilisateurs
+    URL: /dashboard/admin/utilisateurs/bulk/
+    """
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        user_ids = request.POST.getlist('user_ids')
+        
+        if not user_ids:
+            messages.warning(request, "Aucun utilisateur sélectionné.")
+            return redirect('dashboard:users_list')
+        
+        users = User.objects.filter(id__in=user_ids).exclude(id=request.user.id)
+        
+        if action == 'activate':
+            users.update(is_active=True)
+            count = users.count()
+            messages.success(request, f"{count} utilisateur(s) activé(s).")
+            
+        elif action == 'deactivate':
+            users = users.exclude(is_superuser=True)
+            users.update(is_active=False)
+            count = users.count()
+            messages.success(request, f"{count} utilisateur(s) désactivé(s).")
+            
+        elif action == 'delete':
+            users = users.exclude(is_superuser=True)
+            count = users.count()
+            users.delete()
+            messages.success(request, f"{count} utilisateur(s) supprimé(s).")
+        
+        # Journalisation
+        AdminActionLog.objects.create(
+            admin=request.user,
+            action_type='user_activate' if action == 'activate' else 'user_deactivate',
+            description=f"Action en masse : {action} sur {len(user_ids)} utilisateur(s)",
+        )
+    
+    return redirect('dashboard:users_list')
+
+
+# ============================================
+# EXPORT DES UTILISATEURS
+# ============================================
+
+@login_required
+@admin_required
+def users_export(request):
+    """
+    Exporter la liste des utilisateurs en CSV
+    URL: /dashboard/admin/utilisateurs/export/
+    """
+    import csv
+    from django.http import HttpResponse
+    
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="utilisateurs_habiora.csv"'
+    
+    writer = csv.writer(response)
+    writer.writerow(['ID', 'Username', 'Email', 'Prénom', 'Nom', 'Téléphone', 'Rôle', 'Actif', 'Vérifié', 'Date inscription'])
+    
+    users = User.objects.all().select_related('profile')
+    
+    for user in users:
+        role = 'Admin' if user.is_superuser else ('Propriétaire' if user.properties.exists() else 'Client')
+        phone = user.profile.phone_number if hasattr(user, 'profile') else ''
+        verified = user.profile.is_verified if hasattr(user, 'profile') else False
+        
+        writer.writerow([
+            user.id,
+            user.username,
+            user.email,
+            user.first_name,
+            user.last_name,
+            phone,
+            role,
+            'Oui' if user.is_active else 'Non',
+            'Oui' if verified else 'Non',
+            user.date_joined.strftime('%d/%m/%Y %H:%M'),
+        ])
+    
+    return response
 # Create your views here.

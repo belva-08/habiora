@@ -196,7 +196,7 @@
     <h2 class="section-title">🔄 <span>Activités récentes</span></h2>
 
     <div class="activity-list">
-        {% if recent_activities %}
+        {% if recent_activities and recent_activities|length %}
             {% for activity in recent_activities %}
                 <div class="activity-item">
                     <div class="activity-icon 
@@ -218,7 +218,7 @@
                     </div>
                     <div class="activity-text">
                         <p>{{ activity.description }}</p>
-                        <small>{{ activity.created_at|date:"d/m/Y H:i" }} • par {{ activity.admin.username }}</small>
+                        <small>{{ activity.created_at|date:"d/m/Y H:i" }} • par {{ activity.admin.username|default:"Système" }}</small>
                     </div>
                 </div>
             {% endfor %}
