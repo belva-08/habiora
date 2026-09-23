@@ -5,7 +5,7 @@
 {% block title %}{{ user_obj.username }} - Habiora Admin{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'css/admin.css' %}">
 <link rel="stylesheet" href="{% static 'css/users.css' %}">
 {% endblock %}
 
@@ -53,10 +53,10 @@
                     <i class="fas fa-envelope"></i>
                     <span>{{ user_obj.email }}</span>
                 </div>
-                {% if user_obj.profile.phone_number %}
+                {% if user_obj.profile.phone %}
                 <div class="info-item">
                     <i class="fas fa-phone"></i>
-                    <span>{{ user_obj.profile.phone_number }}</span>
+                    <span>{{ user_obj.profile.phone }}</span>
                 </div>
                 {% endif %}
                 {% if user_obj.profile.address %}
@@ -82,7 +82,7 @@
                 </a>
                 
                 {% if user_type == 'proprietaire' and verification %}
-                <a href="{% url 'dashboard:user_verify' user_obj.id %}" class="btn btn-primary btn-full">
+                <a href="{% url 'dashboard:verification_process' verification.id %}" class="btn btn-primary btn-full">
                     <i class="fas fa-user-check"></i> Traiter vérification
                 </a>
                 {% endif %}

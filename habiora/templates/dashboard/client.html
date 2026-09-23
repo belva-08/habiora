@@ -4,7 +4,7 @@
 {% block title %}Tableau de bord - Habiora{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'css/client.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -20,7 +20,7 @@
             <a href="{% url 'dashboard:client_search' %}" class="btn btn-primary">
                 <i class="fas fa-search"></i> Rechercher
             </a>
-            <a href="{% url 'notifications:list' %}" class="btn btn-outline notif-badge">
+            <a href="#notifications" class="btn btn-outline notif-badge">
                 <i class="fas fa-bell"></i> Notifications
                 {% if unread_notifications > 0 %}
                     <span class="badge-count">{{ unread_notifications }}</span>
@@ -140,7 +140,7 @@
         <div class="content-card">
             <div class="card-header">
                 <h4><i class="fas fa-bell" style="color: var(--orange);"></i> Dernières notifications</h4>
-                <a href="{% url 'notifications:list' %}" class="view-all">Voir tout →</a>
+                <a href="#notifications" class="view-all">Voir tout →</a>
             </div>
             
             {% if recent_notifications %}
@@ -148,4 +148,72 @@
                     <div class="list-item">
                         <div class="item-info">
                             <strong>{{ notif.title|truncatechars:40 }}</strong>
-                            <span class="item-meta
+                            <span class="item-meta">
+                                <i class="fas fa-clock"></i> {{ notif.created_at|date:"d/m/Y H:i" }}
+                            </span>
+                        </div>
+                        {% if not notif.is_read %}
+                            <span class="item-status status-pending">Nouveau</span>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-bell-slash"></i>
+                    <p>Aucune notification récente</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="content-card" id="notifications">
+            <div class="card-header">
+                <h4><i class="fas fa-comments" style="color: var(--blue);"></i> Conversations récentes</h4>
+                <a href="{% url 'dashboard:client_messages' %}" class="view-all">Voir tout →</a>
+            </div>
+
+            {% if recent_conversations %}
+                {% for conversation in recent_conversations %}
+                    <div class="list-item">
+                        <div class="item-info">
+                            <strong>Conversation</strong>
+                            <span class="item-meta">
+                                <i class="fas fa-clock"></i> {{ conversation.updated_at|date:"d/m/Y H:i" }}
+                            </span>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-comments"></i>
+                    <p>Aucune conversation récente</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="content-card recommended-properties">
+        <div class="card-header">
+            <h4><i class="fas fa-home" style="color: var(--green, #2ecc71);"></i> Logements recommandés</h4>
+            <a href="{% url 'properties:list' %}" class="view-all">Voir tout →</a>
+        </div>
+
+        {% if recommended_properties %}
+            <div class="properties-grid">
+                {% for property in recommended_properties %}
+                    <a href="{% url 'properties:detail' property.id %}" class="property-card">
+                        <strong>{{ property.title|truncatechars:30 }}</strong>
+                        <span>{{ property.price|floatformat:0 }} FCFA</span>
+                    </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <i class="fas fa-home"></i>
+                <p>Aucun logement disponible pour le moment</p>
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+
+{% endblock %}

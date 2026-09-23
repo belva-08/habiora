@@ -49,6 +49,9 @@ urlpatterns = [
     
     # ===== GESTION DES UTILISATEURS (Admin) =====
     path('admin/utilisateurs/', views.users_list, name='users_list'),
+    path('admin/utilisateurs/exporter/', views.users_export, name='users_export'),
+    path('admin/utilisateurs/actions/', views.users_bulk_action, name='users_bulk_action'),
+    path('admin/utilisateur/<int:user_id>/', views.user_detail, name='user_detail'),
     path('admin/utilisateur/<int:user_id>/activer/', views.user_toggle_active, name='user_toggle_active'),
     path('admin/utilisateur/<int:user_id>/supprimer/', views.user_delete, name='user_delete'),
     
