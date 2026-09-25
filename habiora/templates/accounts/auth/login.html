@@ -1,0 +1,12 @@
+{% extends "accounts/base.html" %}
+{% block title %}Connexion{% endblock %}
+{% block content %}
+<h1>Connexion</h1>
+<form method="post">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit">Se connecter</button>
+</form>
+<p><a href="{% url 'accounts:password_reset' %}">Mot de passe oublié ?</a></p>
+<p>Pas de compte ? <a href="{% url 'accounts:register' %}">Inscription</a></p>
+{% endblock %}

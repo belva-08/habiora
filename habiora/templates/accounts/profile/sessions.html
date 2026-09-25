@@ -1,0 +1,25 @@
+{% extends "accounts/base.html" %}
+{% block content %}
+<h1>Mes sessions actives</h1>
+
+<form method="post" action="{% url 'accounts:revoke_all_sessions' %}">
+  {% csrf_token %}
+  <button type="submit">Déconnecter toutes les autres sessions</button>
+</form>
+
+<ul>
+  {% for s in sessions %}
+    <li>
+      {{ s.ip_address }} — {{ s.last_activity|date:"d/m/Y H:i" }}
+      {% if s.session_key == current_session_key %}
+        <span class="badge">Session actuelle</span>
+      {% else %}
+        <form method="post" action="{% url 'accounts:revoke_session' s.id %}" style="display:inline;">
+          {% csrf_token %}
+          <button type="submit">Révoquer</button>
+        </form>
+      {% endif %}
+    </li>
+  {% endfor %}
+</ul>
+{% endblock %}

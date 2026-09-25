@@ -1,0 +1,58 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Demandes de vérification{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1>Demandes de vérification</h1>
+
+  <form method="get" class="filters">
+    <input type="text" name="q" value="{{ q }}" placeholder="Rechercher...">
+    <select name="status">
+      <option value="">Tous les statuts</option>
+      <option value="pending" {% if status == 'pending' %}selected{% endif %}>En attente</option>
+      <option value="in_review" {% if status == 'in_review' %}selected{% endif %}>En cours</option>
+      <option value="approved" {% if status == 'approved' %}selected{% endif %}>Approuvées</option>
+      <option value="rejected" {% if status == 'rejected' %}selected{% endif %}>Rejetées</option>
+    </select>
+    <button type="submit">Filtrer</button>
+  </form>
+
+  <table class="table">
+    <thead>
+      <tr><th>#</th><th>Utilisateur</th><th>Type</th><th>Statut</th><th>Date</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for r in page_obj %}
+        <tr>
+          <td>{{ r.id }}</td>
+          <td>{{ r.user.email }}</td>
+          <td>{{ r.get_request_type_display }}</td>
+          <td><span class="badge badge-{{ r.status }}">{{ r.get_status_display }}</span></td>
+          <td>{{ r.created_at|date:"d/m/Y H:i" }}</td>
+          <td>
+            {% if not r.is_final %}
+              <a href="{% url 'dashboard:verification_traiter' r.pk %}" class="btn btn-sm">Traiter</a>
+            {% else %}
+              <a href="{% url 'dashboard:verification_detail' r.pk %}" class="btn btn-sm">Voir</a>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6">Aucune demande.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if page_obj.has_other_pages %}
+    <div class="pagination">
+      {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if status %}&status={{ status }}{% endif %}{% if q %}&q={{ q }}{% endif %}">← Précédent</a>
+      {% endif %}
+      <span>Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if status %}&status={{ status }}{% endif %}{% if q %}&q={{ q }}{% endif %}">Suivant →</a>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

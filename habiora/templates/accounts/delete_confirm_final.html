@@ -1,0 +1,576 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Confirmation finale - Habiora{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/delete_account.css' %}">
+<style>
+    /* ===== STYLES SPÉCIFIQUES À LA CONFIRMATION FINALE ===== */
+    .final-warning {
+        background: linear-gradient(135deg, rgba(231, 76, 60, 0.15), rgba(231, 76, 60, 0.05));
+        border: 2px solid #e74c3c;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+    
+    .final-warning .skull-icon {
+        font-size: 50px;
+        color: #e74c3c;
+        margin-bottom: 15px;
+        animation: shake 0.5s infinite;
+    }
+    
+    @keyframes shake {
+        0%, 100% { transform: rotate(0deg); }
+        25% { transform: rotate(-5deg); }
+        75% { transform: rotate(5deg); }
+    }
+    
+    .final-warning h2 {
+        color: #e74c3c;
+        font-size: 24px;
+        margin-bottom: 10px;
+    }
+    
+    .final-warning p {
+        color: var(--gray);
+        font-size: 14px;
+        line-height: 1.7;
+    }
+    
+    /* Récapitulatif */
+    .recap-section {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 25px;
+    }
+    
+    .recap-section h3 {
+        color: var(--white);
+        font-size: 16px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .recap-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+    }
+    
+    .recap-item {
+        background: var(--dark2);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 15px;
+        text-align: center;
+    }
+    
+    .recap-item .recap-icon {
+        width: 40px;
+        height: 40px;
+        margin: 0 auto 10px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+    }
+    
+    .recap-item .recap-number {
+        font-size: 24px;
+        font-weight: 800;
+        color: var(--white);
+    }
+    
+    .recap-item .recap-label {
+        font-size: 12px;
+        color: var(--gray);
+        margin-top: 4px;
+    }
+    
+    /* Compte à rebours */
+    .countdown-section {
+        background: rgba(231, 76, 60, 0.1);
+        border: 1px solid rgba(231, 76, 60, 0.3);
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 25px;
+        text-align: center;
+    }
+    
+    .countdown-section h3 {
+        color: #e74c3c;
+        font-size: 16px;
+        margin-bottom: 15px;
+    }
+    
+    .countdown-timer {
+        font-size: 48px;
+        font-weight: 800;
+        color: #e74c3c;
+        font-family: 'Courier New', monospace;
+        letter-spacing: 5px;
+        margin-bottom: 10px;
+    }
+    
+    .countdown-timer.warning {
+        animation: pulse 1s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    
+    .countdown-section p {
+        color: var(--gray);
+        font-size: 13px;
+    }
+    
+    /* Case à cocher */
+    .acknowledge-box {
+        background: var(--dark2);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .acknowledge-box label {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        cursor: pointer;
+    }
+    
+    .acknowledge-box input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        margin-top: 3px;
+        accent-color: #e74c3c;
+        flex-shrink: 0;
+        cursor: pointer;
+    }
+    
+    .acknowledge-box .acknowledge-text {
+        color: var(--gray);
+        font-size: 13px;
+        line-height: 1.6;
+    }
+    
+    .acknowledge-box .acknowledge-text strong {
+        color: #e74c3c;
+    }
+    
+    /* Bouton final */
+    .btn-final-delete {
+        background: linear-gradient(135deg, #c0392b, #e74c3c);
+        color: white;
+        font-size: 16px;
+        padding: 16px 40px;
+        border-radius: 12px;
+        border: none;
+        cursor: pointer;
+        font-weight: 700;
+        width: 100%;
+        transition: all 0.3s;
+        box-shadow: 0 10px 30px rgba(231, 76, 60, 0.3);
+    }
+    
+    .btn-final-delete:hover:not(:disabled) {
+        transform: translateY(-3px);
+        box-shadow: 0 15px 40px rgba(231, 76, 60, 0.5);
+    }
+    
+    .btn-final-delete:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+        transform: none;
+    }
+    
+    /* Bouton annuler */
+    .btn-cancel-delete {
+        background: var(--card);
+        color: var(--white);
+        border: 2px solid var(--border);
+        font-size: 16px;
+        padding: 16px 40px;
+        border-radius: 12px;
+        cursor: pointer;
+        font-weight: 600;
+        width: 100%;
+        transition: all 0.3s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+    
+    .btn-cancel-delete:hover {
+        border-color: var(--green);
+        color: var(--green);
+        background: rgba(46, 204, 113, 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="delete-container">
+
+    <!-- ===== EN-TÊTE ===== -->
+    <div class="final-warning">
+        <div class="skull-icon">
+            <i class="fas fa-skull-crossbones"></i>
+        </div>
+        <h2>Dernière étape avant suppression</h2>
+        <p>
+            Vous êtes sur le point de <strong>supprimer définitivement</strong> votre compte Habiora.<br>
+            Cette action est <strong>irréversible</strong> et toutes vos données seront perdues.
+        </p>
+    </div>
+
+    <!-- ===== ERREURS ===== -->
+    {% if errors %}
+        <div class="alert alert-error">
+            <ul>
+                {% for error in errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    <!-- ===== RÉCAPITULATIF ===== -->
+    <div class="recap-section">
+        <h3><i class="fas fa-clipboard-list" style="color: var(--orange);"></i> Ce qui sera supprimé</h3>
+        
+        <div class="recap-grid">
+            {% if properties_count > 0 %}
+            <div class="recap-item">
+                <div class="recap-icon" style="background: rgba(118, 37, 216, 0.15); color: var(--purple-light);">
+                    <i class="fas fa-home"></i>
+                </div>
+                <div class="recap-number">{{ properties_count }}</div>
+                <div class="recap-label">Annonce{{ properties_count|pluralize }}</div>
+            </div>
+            {% endif %}
+
+            {% if bookings_count > 0 %}
+            <div class="recap-item">
+                <div class="recap-icon" style="background: rgba(52, 152, 219, 0.15); color: #3498db;">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+                <div class="recap-number">{{ bookings_count }}</div>
+                <div class="recap-label">Réservation{{ bookings_count|pluralize }}</div>
+            </div>
+            {% endif %}
+
+            {% if owner_bookings_count > 0 %}
+            <div class="recap-item">
+                <div class="recap-icon" style="background: rgba(255, 151, 0, 0.15); color: var(--orange);">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="recap-number">{{ owner_bookings_count }}</div>
+                <div class="recap-label">Réservation{{ owner_bookings_count|pluralize }} reçue{{ owner_bookings_count|pluralize }}</div>
+            </div>
+            {% endif %}
+
+            {% if reviews_count > 0 %}
+            <div class="recap-item">
+                <div class="recap-icon" style="background: rgba(241, 196, 15, 0.15); color: #f1c40f;">
+                    <i class="fas fa-star"></i>
+                </div>
+                <div class="recap-number">{{ reviews_count }}</div>
+                <div class="recap-label">Avis</div>
+            </div>
+            {% endif %}
+
+            {% if messages_count > 0 %}
+            <div class="recap-item">
+                <div class="recap-icon" style="background: rgba(46, 204, 113, 0.15); color: #2ecc71;">
+                    <i class="fas fa-envelope"></i>
+                </div>
+                <div class="recap-number">{{ messages_count }}</div>
+                <div class="recap-label">Message{{ messages_count|pluralize }}</div>
+            </div>
+            {% endif %}
+
+            {% if notifications_count > 0 %}
+            <div class="recap-item">
+                <div class="recap-icon" style="background: rgba(231, 76, 60, 0.15); color: #e74c3c;">
+                    <i class="fas fa-bell"></i>
+                </div>
+                <div class="recap-number">{{ notifications_count }}</div>
+                <div class="recap-label">Notification{{ notifications_count|pluralize }}</div>
+            </div>
+            {% endif %}
+
+            {% if not has_data %}
+            <div class="recap-item" style="grid-column: 1 / -1;">
+                <div class="recap-icon" style="background: rgba(46, 204, 113, 0.15); color: #2ecc71;">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="recap-number" style="font-size: 16px;">Aucune donnée significative</div>
+                <div class="recap-label">Votre compte ne contient pas de données à supprimer</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ===== BOUTON EXPORT ===== -->
+    {% if has_data %}
+    <div class="recap-section" style="background: rgba(52, 152, 219, 0.08); border-color: rgba(52, 152, 219, 0.3);">
+        <h3 style="color: #3498db;"><i class="fas fa-download"></i> Sauvegardez vos données</h3>
+        <p style="color: var(--gray); font-size: 14px; margin-bottom: 15px;">
+            Avant de supprimer votre compte, vous pouvez télécharger une copie de toutes vos données.
+            Cette action est <strong>fortement recommandée</strong>.
+        </p>
+        <a href="{% url 'accounts:export_data_before_delete' %}" class="btn btn-outline" style="border-color: #3498db; color: #3498db;">
+            <i class="fas fa-download"></i> Exporter mes données (JSON)
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- ===== COMPTE À REBOURS ===== -->
+    <div class="countdown-section">
+        <h3><i class="fas fa-hourglass-half"></i> Temps restant avant suppression</h3>
+        <div class="countdown-timer" id="countdown">10</div>
+        <p>Cette mesure de sécurité vous empêche de supprimer accidentellement votre compte.</p>
+    </div>
+
+    <!-- ===== FORMULAIRE DE CONFIRMATION ===== -->
+    <form method="POST" id="final-delete-form">
+        {% csrf_token %}
+
+        <!-- Mot de passe -->
+        <div class="recap-section">
+            <h3><i class="fas fa-lock" style="color: var(--purple-light);"></i> Confirmation par mot de passe</h3>
+            
+            <div class="form-group">
+                <label for="password">Entrez votre mot de passe <span class="required">*</span></label>
+                <div class="input-box">
+                    <span class="input-icon">
+                        <i class="fas fa-lock"></i>
+                    </span>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        class="form-control" 
+                        placeholder="Votre mot de passe"
+                        required
+                        autocomplete="current-password"
+                    >
+                    <button type="button" class="show-password" onclick="togglePassword('password', this)">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Confirmation texte -->
+        <div class="recap-section">
+            <h3><i class="fas fa-keyboard" style="color: var(--orange);"></i> Confirmation par texte</h3>
+            
+            <div class="form-group">
+                <label for="confirmation_text">
+                    Tapez <strong style="color: #e74c3c;">"SUPPRIMER DÉFINITIVEMENT"</strong> pour confirmer <span class="required">*</span>
+                </label>
+                <div class="input-box">
+                    <span class="input-icon">
+                        <i class="fas fa-exclamation-triangle" style="color: #e74c3c;"></i>
+                    </span>
+                    <input 
+                        type="text" 
+                        id="confirmation_text" 
+                        name="confirmation_text" 
+                        class="form-control" 
+                        placeholder="SUPPRIMER DÉFINITIVEMENT"
+                        required
+                        autocomplete="off"
+                        style="text-transform: uppercase;"
+                    >
+                </div>
+                <span class="help-text">Respectez les majuscules et les accents</span>
+            </div>
+        </div>
+
+        <!-- Case à cocher -->
+        <div class="recap-section" style="border-color: rgba(231, 76, 60, 0.5);">
+            <h3 style="color: #e74c3c;"><i class="fas fa-exclamation-circle"></i> Reconnaissance des conséquences</h3>
+            
+            <div class="acknowledge-box">
+                <label>
+                    <input type="checkbox" id="acknowledge" name="acknowledge" required>
+                    <span class="acknowledge-text">
+                        Je comprends que la suppression de mon compte est <strong>définitive et irréversible</strong>. 
+                        Je reconnais que <strong>toutes mes données seront perdues</strong> et que je ne pourrai pas les récupérer. 
+                        Je décharge Habiora de toute responsabilité concernant la perte de ces données.
+                    </span>
+                </label>
+            </div>
+        </div>
+
+        <!-- ===== BOUTONS D'ACTION ===== -->
+        <div class="form-actions-final">
+            <a href="{% url 'accounts:cancel_deletion' %}" class="btn-cancel-delete">
+                <i class="fas fa-arrow-left"></i> Annuler et conserver mon compte
+            </a>
+            <button type="submit" class="btn-final-delete" id="final-delete-btn" disabled>
+                <i class="fas fa-skull-crossbones"></i> SUPPRIMER DÉFINITIVEMENT MON COMPTE
+            </button>
+        </div>
+    </form>
+
+    <!-- ===== MESSAGE DE SOUTIEN ===== -->
+    <div style="text-align: center; margin-top: 30px; padding: 20px; color: var(--gray); font-size: 13px;">
+        <p>
+            <i class="fas fa-heart" style="color: #e74c3c;"></i>
+            Nous sommes tristes de vous voir partir. Si vous avez des suggestions pour améliorer Habiora, 
+            <a href="#" style="color: var(--purple-light);">contactez-nous</a>.
+        </p>
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // ========================================
+    // VARIABLES
+    // ========================================
+    const form = document.getElementById('final-delete-form');
+    const passwordInput = document.getElementById('password');
+    const confirmationInput = document.getElementById('confirmation_text');
+    const acknowledgeInput = document.getElementById('acknowledge');
+    const submitBtn = document.getElementById('final-delete-btn');
+    const countdownElement = document.getElementById('countdown');
+    
+    let countdownValue = 10;
+    let countdownInterval = null;
+    let countdownFinished = false;
+
+    // ========================================
+    // COMPTE À REBOURS
+    // ========================================
+    function startCountdown() {
+        countdownInterval = setInterval(() => {
+            countdownValue--;
+            
+            if (countdownValue <= 0) {
+                clearInterval(countdownInterval);
+                countdownFinished = true;
+                countdownElement.textContent = '✓';
+                countdownElement.style.color = '#2ecc71';
+                countdownElement.classList.remove('warning');
+                validateForm();
+            } else {
+                countdownElement.textContent = countdownValue;
+                
+                if (countdownValue <= 3) {
+                    countdownElement.classList.add('warning');
+                }
+            }
+        }, 1000);
+    }
+
+    // Démarrer le compte à rebours
+    startCountdown();
+
+    // ========================================
+    // TOGGLE PASSWORD
+    // ========================================
+    function togglePassword(inputId, button) {
+        const input = document.getElementById(inputId);
+        const icon = button.querySelector('i');
+        
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    }
+
+    // ========================================
+    // VALIDATION
+    // ========================================
+    function validateForm() {
+        const passwordValid = passwordInput.value.trim().length > 0;
+        const textValid = confirmationInput.value.trim() === 'SUPPRIMER DÉFINITIVEMENT';
+        const acknowledgeValid = acknowledgeInput.checked;
+        const countdownOk = countdownFinished;
+        
+        const allValid = passwordValid && textValid && acknowledgeValid && countdownOk;
+        
+        submitBtn.disabled = !allValid;
+        
+        // Changer le style du bouton
+        if (allValid) {
+            submitBtn.style.background = 'linear-gradient(135deg, #c0392b, #e74c3c)';
+            submitBtn.style.opacity = '1';
+        } else {
+            submitBtn.style.opacity = '0.4';
+        }
+        
+        return allValid;
+    }
+
+    // Événements
+    passwordInput.addEventListener('input', validateForm);
+    confirmationInput.addEventListener('input', function() {
+        // Forcer les majuscules
+        this.value = this.value.toUpperCase();
+        validateForm();
+    });
+    acknowledgeInput.addEventListener('change', validateForm);
+
+    // ========================================
+    // SOUMISSION
+    // ========================================
+    form.addEventListener('submit', function(e) {
+        if (!validateForm()) {
+            e.preventDefault();
+            return;
+        }
+        
+        // Dernière confirmation
+        const confirmed = confirm(
+            "⚠️ DERNIÈRE CONFIRMATION ⚠️\n\n" +
+            "Vous êtes sur le point de supprimer définitivement votre compte.\n" +
+            "Cette action est IRRÉVERSIBLE.\n\n" +
+            "Voulez-vous vraiment continuer ?"
+        );
+        
+        if (!confirmed) {
+            e.preventDefault();
+            return;
+        }
+        
+        // Désactiver le bouton pour éviter les double-clics
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Suppression en cours...';
+    });
+
+    // ========================================
+    // INITIALISATION
+    // ========================================
+    validateForm();
+    
+    console.log('✅ Page de confirmation finale chargée');
+</script>
+{% endblock %}

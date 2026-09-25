@@ -1,0 +1,4 @@
+<h2>Bonjour {{ req.user.get_full_name }},</h2>
+<p>Votre demande de vérification <strong>#{{ req.id }}</strong> n'a pas pu être acceptée.</p>
+<p><strong>Motif :</strong> {{ req.rejection_reason }}</p>
+<p>Vous pouvez soumettre une nouvelle demande avec les documents corrigés.</p>

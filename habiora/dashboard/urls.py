@@ -197,5 +197,8 @@ urlpatterns = [
     path('admin/utilisateur/<int:user_id>/stats/', views.user_stats_ajax, name='user_stats_ajax'),
     path('admin/utilisateurs/bulk/', views.users_bulk_action, name='users_bulk_action'),
     path('admin/utilisateurs/export/', views.users_export, name='users_export'),
-]
 
+    path('admin/verification/', views.verification_list, name='verification_list'),
+    path('admin/verification/<int:pk>/', views.verification_detail, name='verification_detail'),
+    path('admin/verification/<int:pk>/traiter/', views.verification_traiter, name='verification_traiter'),
+]

@@ -1,0 +1,62 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Traiter la vérification{% endblock %}
+
+{% block content %}
+<div class="dashboard-container verification-page">
+    <div class="dashboard-header">
+        <div>
+            <h1>Traiter la vérification</h1>
+            <p class="subtitle">Dossier de {{ verification.user.username }}</p>
+        </div>
+        <span class="verification-status verification-status-{{ verification.status }}">
+            {{ verification.get_status_display }}
+        </span>
+    </div>
+
+    <div class="verification-card">
+        <p class="verification-date">Soumise le {{ verification.submitted_at|date:"d/m/Y H:i" }}</p>
+
+        <h2 class="section-title">Documents soumis</h2>
+        <ul class="verification-documents">
+        <li>
+            Pièce d'identité :
+            {% if verification.identity_document %}
+                <a href="{{ verification.identity_document.url }}" target="_blank" rel="noopener">Voir le document</a>
+            {% else %}
+                Non fournie
+            {% endif %}
+        </li>
+        <li>
+            Justificatif de propriété :
+            {% if verification.proof_of_ownership %}
+                <a href="{{ verification.proof_of_ownership.url }}" target="_blank" rel="noopener">Voir le document</a>
+            {% else %}
+                Non fourni
+            {% endif %}
+        </li>
+        <li>
+            Pièce fiscale :
+            {% if verification.tax_identification %}
+                <a href="{{ verification.tax_identification.url }}" target="_blank" rel="noopener">Voir le document</a>
+            {% else %}
+                Non fournie
+            {% endif %}
+        </li>
+        </ul>
+
+        <form method="post" class="verification-form">
+            {% csrf_token %}
+            <label for="notes">Notes administratives</label>
+            <textarea id="notes" name="notes" rows="5" placeholder="Ajoutez une note pour le demandeur...">{{ verification.admin_notes }}</textarea>
+
+            <div class="verification-actions">
+                <button type="submit" name="action" value="approve" class="btn btn-success">Approuver</button>
+                <button type="submit" name="action" value="reject" class="btn btn-danger">Rejeter</button>
+            </div>
+        </form>
+
+        <a href="{% url 'dashboard:verifications_list' %}" class="verification-back">Retour aux vérifications</a>
+    </div>
+</div>
+{% endblock %}

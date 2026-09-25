@@ -179,4 +179,25 @@
                     </a>
                 {% else %}
                     <a href="{% url 'properties:create' %}" class="btn-status btn-primary">
-                        <i class="fas fa-plus"></i> Publier une
+                        <i class="fas fa-plus"></i> Publier une annonce
+                    </a>
+                    <a href="{% url 'accounts:profile' %}" class="btn-status btn-outline">
+                        <i class="fas fa-arrow-left"></i> Retour au profil
+                    </a>
+                {% endif %}
+            </div>
+        {% else %}
+            <span class="status-icon">📄</span>
+            <h2>Aucune demande de vérification</h2>
+            <p class="info-text">
+                Vous n'avez pas encore soumis de demande de vérification.
+            </p>
+            <div class="actions">
+                <a href="{% url 'accounts:verify_owner' %}" class="btn-status btn-primary">
+                    <i class="fas fa-upload"></i> Commencer la vérification
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "accounts/base.html" %}
+{% block content %}
+<h1>Statut de ma demande</h1>
+
+{% if req.status == 'pending' %}
+  <div class="alert alert-info">
+    ⏳ Votre dossier est en attente de validation.
+  </div>
+{% elif req.status == 'in_review' %}
+  <div class="alert alert-info">
+    🔍 Votre dossier est en cours d'examen.
+  </div>
+{% elif req.status == 'approved' %}
+  <div class="alert alert-success">
+    ✅ Votre compte propriétaire est activé !
+    <a href="{% url 'owner:dashboard' %}">Accéder à mon espace</a>
+  </div>
+{% elif req.status == 'rejected' %}
+  <div class="alert alert-danger">
+    ❌ Votre demande a été rejetée.
+    <p><strong>Motif :</strong> {{ req.rejection_reason }}</p>
+    <a href="{% url 'accounts:owner_request_form' %}">Soumettre une nouvelle demande</a>
+  </div>
+{% endif %}
+
+<p>Demande envoyée le {{ req.created_at|date:"d/m/Y H:i" }}</p>
+{% endblock %}

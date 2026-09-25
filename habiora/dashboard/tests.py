@@ -43,3 +43,15 @@ class AdminStatisticsViewTests(TestCase):
         self.client.force_login(self.admin)
         response = self.client.get(reverse('dashboard:admin_statistics'))
         self.assertEqual(response.status_code, 200)
+
+    def test_user_detail_page_loads(self):
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse('dashboard:user_detail', args=[self.owner.id]))
+        self.assertEqual(response.status_code, 200)
+
+    def test_user_delete_confirmation_deletes_user(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(reverse('dashboard:user_delete', args=[self.owner.id]))
+
+        self.assertRedirects(response, reverse('dashboard:users_list'))
+        self.assertFalse(get_user_model().objects.filter(pk=self.owner.id).exists())

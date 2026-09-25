@@ -1,0 +1,29 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Demande #{{ req.id }}{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1>Demande #{{ req.id }}</h1>
+
+  <p>Utilisateur : <strong>{{ req.user.email }}</strong></p>
+  <p>Type : {{ req.get_request_type_display }}</p>
+  <p>Statut : <span class="badge badge-{{ req.status }}">{{ req.get_status_display }}</span></p>
+  <p>Soumise : {{ req.created_at|date:"d/m/Y H:i" }}</p>
+
+  {% if req.processed_by %}
+    <p>Traitée par : {{ req.processed_by }} le {{ req.processed_at|date:"d/m/Y H:i" }}</p>
+  {% endif %}
+
+  {% if req.rejection_reason %}
+    <div class="alert alert-danger">
+      <strong>Motif de rejet :</strong> {{ req.rejection_reason }}
+    </div>
+  {% endif %}
+
+  {% if not req.is_final %}
+    <a href="{% url 'dashboard:verification_traiter' req.pk %}" class="btn btn-primary">Traiter cette demande</a>
+  {% endif %}
+
+  <a href="{% url 'dashboard:verification_list' %}" class="btn">Retour à la liste</a>
+</div>
+{% endblock %}

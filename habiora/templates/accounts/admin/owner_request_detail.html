@@ -1,0 +1,35 @@
+{% extends "accounts/base.html" %}
+{% block content %}
+<h1>Demande de {{ req.user.email }}</h1>
+
+<h2>Informations</h2>
+<p><strong>Société :</strong> {{ req.company_name|default:"—" }}</p>
+<p><strong>SIRET :</strong> {{ req.siret|default:"—" }}</p>
+<p><strong>Adresse :</strong> {{ req.address }}, {{ req.postal_code }} {{ req.city }}</p>
+<p><strong>Téléphone :</strong> {{ req.phone }}</p>
+<p><strong>Message :</strong> {{ req.message|default:"—" }}</p>
+<p><strong>Soumise le :</strong> {{ req.created_at|date:"d/m/Y H:i" }}</p>
+
+{% if req.status == 'pending' or req.status == 'in_review' %}
+  <h2>Actions</h2>
+
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="approve">
+    <button type="submit" class="btn-success">✅ Approuver</button>
+  </form>
+
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="reject">
+    <label>Motif du rejet :</label>
+    <textarea name="reason" required rows="3"></textarea>
+    <button type="submit" class="btn-danger">❌ Rejeter</button>
+  </form>
+{% else %}
+  <p>Statut : <strong>{{ req.get_status_display }}</strong></p>
+  {% if req.rejection_reason %}
+    <p><strong>Motif :</strong> {{ req.rejection_reason }}</p>
+  {% endif %}
+{% endif %}
+{% endblock %}

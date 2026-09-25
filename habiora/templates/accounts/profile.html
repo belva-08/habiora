@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Mon profil - Habiora{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/base.css' %}">
+<style>
+    .profile-page {
+        margin: 0 auto;
+        max-width: 900px;
+        padding: 120px 20px 60px;
+    }
+
+    .profile-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 32px;
+    }
+
+    .profile-header {
+        align-items: center;
+        display: flex;
+        gap: 18px;
+        margin-bottom: 28px;
+    }
+
+    .profile-avatar {
+        align-items: center;
+        background: var(--purple);
+        border-radius: 50%;
+        color: var(--white);
+        display: flex;
+        flex: 0 0 64px;
+        font-size: 24px;
+        font-weight: 700;
+        height: 64px;
+        justify-content: center;
+    }
+
+    .profile-header h1 {
+        color: var(--white);
+        margin: 0 0 5px;
+    }
+
+    .profile-header p,
+    .profile-field span {
+        color: var(--gray);
+    }
+
+    .profile-fields {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .profile-field {
+        background: var(--dark2);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px;
+    }
+
+    .profile-field strong,
+    .profile-field span {
+        display: block;
+    }
+
+    .profile-field strong {
+        color: var(--white);
+        margin-top: 5px;
+    }
+
+    .profile-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 26px;
+    }
+
+    @media (max-width: 600px) {
+        .profile-card {
+            padding: 22px;
+        }
+
+        .profile-fields {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-page">
+    <div class="profile-card">
+        <div class="profile-header">
+            <div class="profile-avatar">{{ user.first_name|default:user.username|first|upper }}</div>
+            <div>
+                <h1>Mon profil</h1>
+                <p>{{ user.get_full_name|default:user.username }}</p>
+            </div>
+        </div>
+
+        <div class="profile-fields">
+            <div class="profile-field">
+                <span>Nom d'utilisateur</span>
+                <strong>{{ user.username }}</strong>
+            </div>
+            <div class="profile-field">
+                <span>Email</span>
+                <strong>{{ user.email }}</strong>
+            </div>
+            <div class="profile-field">
+                <span>Téléphone</span>
+                <strong>{{ user.profile.phone_number|default:'Non renseigné' }}</strong>
+            </div>
+            <div class="profile-field">
+                <span>Ville</span>
+                <strong>{{ user.profile.city|default:'Non renseignée' }}</strong>
+            </div>
+        </div>
+
+        <div class="profile-actions">
+            <a href="{% url 'accounts:profile_edit' %}" class="btn btn-primary">Modifier le profil</a>
+            <a href="{% url 'accounts:password_change' %}" class="btn btn-outline">Changer le mot de passe</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

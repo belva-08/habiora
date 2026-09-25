@@ -16,6 +16,251 @@
     --border: #352c42;
 }
 
+.dashboard-shell-header {
+    align-items: center;
+    background: rgba(16, 11, 28, 0.97);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    height: 76px;
+    left: 0;
+    padding: 0 4%;
+    position: fixed;
+    right: 0;
+    top: 0;
+    z-index: 100;
+}
+
+.dashboard-shell-nav {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    margin: 0 auto;
+    max-width: 1200px;
+    width: 100%;
+}
+
+.dashboard-shell-nav a {
+    color: var(--purple-light);
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.dashboard-shell-nav span {
+    color: var(--gray);
+    font-size: 13px;
+}
+
+/* ========================================
+   TRAITEMENT DES VÉRIFICATIONS
+======================================== */
+.verification-page {
+    max-width: 900px;
+}
+
+.verification-status {
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 9px 14px;
+}
+
+.verification-status-pending {
+    background: rgba(255, 151, 0, 0.16);
+    color: var(--orange);
+}
+
+.verification-status-approved {
+    background: rgba(46, 204, 113, 0.16);
+    color: #2ecc71;
+}
+
+.verification-status-rejected {
+    background: rgba(231, 76, 60, 0.16);
+    color: #e74c3c;
+}
+
+.verification-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 15px;
+    padding: 28px;
+}
+
+.verification-filter {
+    align-items: end;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.verification-filter label {
+    color: var(--white);
+    font-weight: 600;
+    width: 100%;
+}
+
+.verification-filter select {
+    background: var(--dark2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--white);
+    font: inherit;
+    min-height: 42px;
+    padding: 0 12px;
+}
+
+.verification-table-wrapper {
+    overflow-x: auto;
+}
+
+.verification-table {
+    border-collapse: collapse;
+    min-width: 700px;
+    width: 100%;
+}
+
+.verification-table th,
+.verification-table td {
+    border-bottom: 1px solid var(--border);
+    padding: 15px 12px;
+    text-align: left;
+    vertical-align: middle;
+}
+
+.verification-table th {
+    color: var(--gray);
+    font-size: 12px;
+    text-transform: uppercase;
+}
+
+.verification-table td {
+    color: var(--white);
+    font-size: 14px;
+}
+
+.verification-table td strong,
+.verification-table td small {
+    display: block;
+}
+
+.verification-table td small {
+    color: var(--gray);
+    margin-top: 4px;
+}
+
+.verification-table tr:last-child td {
+    border-bottom: 0;
+}
+
+.verification-empty {
+    color: var(--gray) !important;
+    padding: 32px 12px !important;
+    text-align: center !important;
+}
+
+.btn-sm {
+    font-size: 13px;
+    padding: 8px 12px;
+}
+
+.verification-date {
+    color: var(--gray);
+    font-size: 14px;
+    margin-bottom: 28px;
+}
+
+.verification-documents {
+    display: grid;
+    gap: 12px;
+    list-style: none;
+    margin: 0 0 30px;
+    padding: 0;
+}
+
+.verification-documents li {
+    align-items: center;
+    background: var(--dark2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--white);
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 15px 17px;
+}
+
+.verification-documents a,
+.verification-back {
+    color: var(--purple-light);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.verification-documents a:hover,
+.verification-back:hover {
+    text-decoration: underline;
+}
+
+.verification-form label {
+    color: var(--white);
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.verification-form textarea {
+    background: var(--dark2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-sizing: border-box;
+    color: var(--white);
+    display: block;
+    font: inherit;
+    min-height: 130px;
+    padding: 13px;
+    resize: vertical;
+    width: 100%;
+}
+
+.verification-form textarea:focus {
+    border-color: var(--purple-light);
+    outline: 2px solid rgba(180, 119, 255, 0.2);
+}
+
+.verification-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 18px 0 22px;
+}
+
+.verification-actions .btn {
+    border: 0;
+    cursor: pointer;
+}
+
+.btn-success {
+    background: #2ecc71;
+    color: #101b14;
+}
+
+.btn-danger {
+    background: #e74c3c;
+    color: #fff;
+}
+
+@media (max-width: 600px) {
+    .verification-card {
+        padding: 20px;
+    }
+
+    .verification-documents li {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+
 /* ========================================
    DASHBOARD LAYOUT
 ======================================== */

@@ -1,0 +1,31 @@
+{% extends "accounts/base.html" %}
+{% block content %}
+<h1>Demandes propriétaire</h1>
+
+<div class="tabs">
+  <a href="?status=pending" class="{% if current_status == 'pending' %}active{% endif %}">En attente</a>
+  <a href="?status=approved" class="{% if current_status == 'approved' %}active{% endif %}">Approuvées</a>
+  <a href="?status=rejected" class="{% if current_status == 'rejected' %}active{% endif %}">Rejetées</a>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Utilisateur</th><th>Ville</th><th>Envoyée le</th><th>Statut</th><th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for req in requests %}
+      <tr>
+        <td>{{ req.user.email }}</td>
+        <td>{{ req.city }}</td>
+        <td>{{ req.created_at|date:"d/m/Y H:i" }}</td>
+        <td>{{ req.get_status_display }}</td>
+        <td><a href="{% url 'accounts:admin_owner_request_detail' req.pk %}">Voir</a></td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="5">Aucune demande.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

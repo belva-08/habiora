@@ -1,0 +1,130 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}Traiter la demande #{{ req.id }}{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  {# Fil d'ariane #}
+  <nav class="breadcrumb">
+    <a href="{% url 'dashboard:verification_list' %}">Vérifications</a>
+    <span>/</span>
+    <a href="{% url 'dashboard:verification_detail' req.pk %}">#{{ req.id }}</a>
+    <span>/</span>
+    <span>Traiter</span>
+  </nav>
+
+  <h1>Traiter la demande #{{ req.id }}</h1>
+
+  {# Messages Django #}
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+
+  {# Statut actuel #}
+  <div class="status-banner status-{{ req.status }}">
+    Statut actuel : <strong>{{ req.get_status_display }}</strong>
+  </div>
+
+  <div class="layout-2col">
+
+    {# ─── Colonne gauche : infos demande ─── #}
+    <section class="card">
+      <h2>Demande</h2>
+      <dl>
+        <dt>Type</dt><dd>{{ req.get_request_type_display }}</dd>
+        <dt>Demandeur</dt>
+        <dd>
+          {{ req.user.get_full_name }} ({{ req.user.email }})
+          {% if req.user.is_verified %}<span class="badge">Déjà vérifié</span>{% endif %}
+        </dd>
+        <dt>Message</dt>
+        <dd>{{ req.message|default:"—"|linebreaksbr }}</dd>
+        <dt>Soumise le</dt><dd>{{ req.created_at|date:"d/m/Y H:i" }}</dd>
+      </dl>
+
+      {% if req.document %}
+        <h3>Document</h3>
+        <a href="{{ req.document.url }}" target="_blank" class="btn">
+          📎 Télécharger / Voir
+        </a>
+        {% if req.document.url|lower|slice:"-4:" in ".jpg,.png,.gif,.webp" %}
+          <img src="{{ req.document.url }}" alt="Document" style="max-width:100%;margin-top:1rem;">
+        {% endif %}
+      {% endif %}
+    </section>
+
+    {# ─── Colonne droite : actions ─── #}
+    <section class="card">
+      <h2>Actions</h2>
+
+      {% if req.status == 'pending' %}
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="start_review">
+          <button type="submit" class="btn btn-secondary">
+            🔍 Marquer en cours d'examen
+          </button>
+        </form>
+      {% endif %}
+
+      {# Approbation #}
+      <form method="post" class="action-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="approve">
+        <h3>✅ Approuver</h3>
+        {{ approve_form.as_p }}
+        <button type="submit" class="btn btn-success"
+                onclick="return confirm('Confirmer l\'approbation ?')">
+          Approuver la demande
+        </button>
+      </form>
+
+      <hr>
+
+      {# Rejet #}
+      <form method="post" class="action-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="reject">
+        <h3>❌ Rejeter</h3>
+        {{ reject_form.as_p }}
+        <button type="submit" class="btn btn-danger"
+                onclick="return confirm('Confirmer le rejet ?')">
+          Rejeter la demande
+        </button>
+      </form>
+    </section>
+  </div>
+
+  {# ─── Historique ─── #}
+  <section class="card">
+    <h2>Historique</h2>
+    {% if logs %}
+      <table class="table">
+        <thead>
+          <tr><th>Date</th><th>Acteur</th><th>Action</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          {% for log in logs %}
+            <tr>
+              <td>{{ log.created_at|date:"d/m/Y H:i" }}</td>
+              <td>{{ log.actor|default:"—" }}</td>
+              <td>
+                {{ log.action }}
+                {% if log.old_status %} ({{ log.old_status }} → {{ log.new_status }}){% endif %}
+              </td>
+              <td>{{ log.notes|default:"—" }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>Aucune action enregistrée.</p>
+    {% endif %}
+  </section>
+
+</div>
+{% endblock %}

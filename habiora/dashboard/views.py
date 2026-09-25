@@ -21,9 +21,13 @@ from properties.models import Property, PropertyImage
 from chat.models import Conversation, Message
 from calendar import monthrange
 import json
-
 from django.core.paginator import Paginator
 from .models import AdminActionLog
+from django.contrib.admin.views.decorators import staff_member_required
+from .models import VerificationRequest, VerificationLog
+from .forms import ApproveForm, RejectForm
+from .services import VerificationService
+
 def admin_required(view_func):
     """Décorateur pour restreindre aux administrateurs"""
     def wrapper(request, *args, **kwargs):
@@ -865,8 +869,15 @@ def dashboard_redirect(request):
     
     if user.is_superuser or user.is_staff:
         return redirect('dashboard:admin_dashboard')
-    else:
-        return redirect('dashboard:client_dashboard')
+
+    profile = UserProfile.objects.filter(user=user).first()
+    if profile and profile.role == 'proprietaire':
+        return redirect('dashboard:owner_dashboard')
+
+    if OwnerVerification.objects.filter(user=user).exists():
+        return redirect('dashboard:owner_dashboard')
+
+    return redirect('dashboard:client_dashboard')
 
 
 
@@ -881,14 +892,13 @@ def owner_required(view_func):
             messages.error(request, "Veuillez vous connecter.")
             return redirect('accounts:login')
         
-        # Vérifier si l'utilisateur est propriétaire
-        # À adapter selon votre modèle User
-        if not request.user.is_superuser:
-            # Vérifier le rôle (si vous avez un champ role)
-            # if hasattr(request.user, 'role') and request.user.role != 'proprietaire':
-            #     messages.error(request, "Vous n'avez pas les droits de propriétaire.")
-            #     return redirect('home')
-            pass
+        profile = UserProfile.objects.filter(user=request.user).first()
+        is_owner = (
+            profile and profile.role == 'proprietaire'
+        ) or OwnerVerification.objects.filter(user=request.user).exists()
+        if not request.user.is_superuser and not is_owner:
+            messages.error(request, "Accès réservé aux propriétaires.")
+            return redirect('dashboard:client_dashboard')
         
         return view_func(request, *args, **kwargs)
     return wrapper
@@ -2287,18 +2297,18 @@ def user_detail(request, user_id):
     total_properties = properties.count()
     
     # Réservations (si client)
-    bookings = Booking.objects.filter(client=user_obj).order_by('-created_at')
+    bookings = Booking.objects.filter(tenant=user_obj).order_by('-created_at')
     total_bookings = bookings.count()
     
     # Réservations en tant que propriétaire
-    owner_bookings = Booking.objects.filter(owner=user_obj).order_by('-created_at')
+    owner_bookings = Booking.objects.filter(property__owner=user_obj).order_by('-created_at')
     total_owner_bookings = owner_bookings.count()
     
     # Revenus (si propriétaire)
     total_revenue = Booking.objects.filter(
-        owner=user_obj,
+        property__owner=user_obj,
         status__in=['confirmed', 'completed']
-    ).aggregate(total=Sum('total_price'))['total'] or 0
+    ).aggregate(total=Sum('property__price'))['total'] or 0
     
     # Avis reçus
     properties_ids = properties.values_list('id', flat=True)
@@ -2542,14 +2552,14 @@ def user_stats_ajax(request, user_id):
     properties_count = Property.objects.filter(owner=user_obj).count()
     
     # Réservations
-    bookings_count = Booking.objects.filter(client=user_obj).count()
-    owner_bookings_count = Booking.objects.filter(owner=user_obj).count()
+    bookings_count = Booking.objects.filter(tenant=user_obj).count()
+    owner_bookings_count = Booking.objects.filter(property__owner=user_obj).count()
     
     # Revenus
     revenue = Booking.objects.filter(
-        owner=user_obj,
+        property__owner=user_obj,
         status__in=['confirmed', 'completed']
-    ).aggregate(total=Sum('total_price'))['total'] or 0
+    ).aggregate(total=Sum('property__price'))['total'] or 0
     
     # Avis
     properties_ids = Property.objects.filter(owner=user_obj).values_list('id', flat=True)
@@ -2657,4 +2667,94 @@ def users_export(request):
         ])
     
     return response
+
+@staff_member_required
+def verification_list(request):
+    qs = VerificationRequest.objects.select_related('user', 'processed_by')
+    
+    # Filtres
+    status = request.GET.get('status')
+    if status:
+        qs = qs.filter(status=status)
+    
+    q = request.GET.get('q')
+    if q:
+        qs = qs.filter(
+            Q(user__email__icontains=q) |
+            Q(user__username__icontains=q) |
+            Q(id__icontains=q)
+        )
+    
+    paginator = Paginator(qs, 20)
+    page = paginator.get_page(request.GET.get('page'))
+    
+    return render(request, 'dashboard/admin/list.html', {
+        'page_obj': page,
+        'status': status,
+        'q': q,
+    })
+
+
+@staff_member_required
+def verification_detail(request, pk):
+    req = get_object_or_404(
+        VerificationRequest.objects.select_related('user', 'processed_by'),
+        pk=pk
+    )
+    return render(request, 'dashboard/admin/detail.html', {
+        'req': req,
+        'logs': req.logs.select_related('actor').all(),
+    })
+
+
+@staff_member_required
+def verification_traiter(request, pk):
+    """Vue principale de traitement"""
+    req = get_object_or_404(
+        VerificationRequest.objects.select_related('user'),
+        pk=pk
+    )
+    
+    if req.is_final:
+        messages.warning(request, "Cette demande est déjà traitée.")
+        return redirect('dashboard:verification_detail', pk=pk)
+    
+    approve_form = ApproveForm(prefix='approve')
+    reject_form = RejectForm(prefix='reject')
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'start_review':
+            VerificationService.start_review(req, request.user)
+            messages.info(request, "Demande marquée en cours d'examen.")
+            return redirect('dashboard:verification_traiter', pk=pk)
+        
+        if action == 'approve':
+            approve_form = ApproveForm(request.POST, prefix='approve')
+            if approve_form.is_valid():
+                VerificationService.approve(
+                    req, request.user,
+                    notes=approve_form.cleaned_data['notes']
+                )
+                messages.success(request, "Demande approuvée. Utilisateur notifié.")
+                return redirect('dashboard:verification_list')
+        
+        if action == 'reject':
+            reject_form = RejectForm(request.POST, prefix='reject')
+            if reject_form.is_valid():
+                VerificationService.reject(
+                    req, request.user,
+                    reason=reject_form.cleaned_data['reason'],
+                    notes=reject_form.cleaned_data['notes']
+                )
+                messages.success(request, "Demande rejetée. Utilisateur notifié.")
+                return redirect('dashboard:verification_list')
+    
+    return render(request, 'dashboard/admin/traiter.html', {
+        'req': req,
+        'approve_form': approve_form,
+        'reject_form': reject_form,
+        'logs': req.logs.select_related('actor').all(),
+    })
 # Create your views here.

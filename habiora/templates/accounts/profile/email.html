@@ -1,0 +1,10 @@
+{% extends "accounts/base.html" %}
+{% block content %}
+<h1>Changer mon email</h1>
+<p>Email actuel : {{ user.email }}</p>
+<form method="post">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit">Envoyer la confirmation</button>
+</form>
+{% endblock %}

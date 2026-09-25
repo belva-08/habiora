@@ -1,0 +1,10 @@
+{% extends "accounts/base.html" %}
+{% block content %}
+<h1>Dossier propriétaire</h1>
+<p>Remplissez ces informations. Un administrateur validera votre compte.</p>
+<form method="post">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit">Envoyer mon dossier</button>
+</form>
+{% endblock %}

@@ -228,6 +228,8 @@
 .info-item i { width: 16px; color: var(--purple-light); text-align: center; }
 .profile-actions { display: grid; gap: 10px; margin-top: 20px; }
 .btn-full { width: 100%; justify-content: center; }
+.btn-danger { background: #e74c3c; color: #fff; }
+.btn-danger:hover { background: #c0392b; }
 .stats-grid-small { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
 .stat-mini { display: flex; align-items: center; gap: 12px; padding: 16px; border: 1px solid var(--border); border-radius: 10px; }
 .stat-mini-icon { width: 42px; height: 42px; border-radius: 10px; flex-shrink: 0; }

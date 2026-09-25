@@ -5,7 +5,7 @@
 {% block title %}Tableau de bord - Habiora Propriétaire{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/admin.css' %}">
+<link rel="stylesheet" href="{% static 'css/propio.css' %}">
 <style>
     .verification-banner {
         background: rgba(241, 196, 15, 0.1);
@@ -49,16 +49,16 @@
 
 {% block content %}
 
-<div class="dashboard-container">
+<div class="dashboard-container owner-dashboard">
 
     <!-- ===== EN-TÊTE ===== -->
     <div class="dashboard-header">
         <div>
-            <h1>Tableau de bord</h1>
-            <p class="subtitle">Bienvenue, {{ user.first_name|default:user.username }} 👋</p>
+            <h1>Tableau de bord propriétaire</h1>
+            <p class="subtitle">Gérez vos annonces, réservations et revenus.</p>
         </div>
         <div class="header-actions">
-            <a href="{% url 'dashboard:owner_property_create' %}" class="btn btn-primary">
+            <a href="{% url 'dashboard:owner_property_create' %}" class="btn btn-primary owner-publish-action">
                 <i class="fas fa-plus"></i> Publier une annonce
             </a>
             <a href="{% url 'dashboard:owner_dashboard' %}" class="btn btn-outline notif-badge" aria-label="Notifications">

@@ -1,0 +1,10 @@
+{% extends "accounts/base.html" %}
+{% block content %}
+<h1>Supprimer mon compte</h1>
+<p>Cette action est irréversible.</p>
+<form method="post">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit" class="danger">Supprimer définitivement</button>
+</form>
+{% endblock %}

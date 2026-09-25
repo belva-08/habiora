@@ -1,0 +1,430 @@
+<!-- templates/accounts/delete_account.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Supprimer mon compte - Habiora{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/delete_account.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="delete-container">
+
+    <!-- ===== EN-TÊTE ===== -->
+    <div class="delete-header">
+        <div class="warning-icon">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <h1>Supprimer mon compte</h1>
+        <p class="subtitle">Cette action est irréversible. Veuillez lire attentivement les informations ci-dessous.</p>
+    </div>
+
+    <!-- ===== AVERTISSEMENTS ===== -->
+    <div class="warning-box">
+        <h3><i class="fas fa-exclamation-circle"></i> Conséquences de la suppression</h3>
+        <ul class="warning-list">
+            <li>
+                <i class="fas fa-times-circle"></i>
+                <span>Votre compte et toutes vos données personnelles seront <strong>définitivement supprimés</strong>.</span>
+            </li>
+            {% if has_properties %}
+            <li>
+                <i class="fas fa-times-circle"></i>
+                <span>Vos <strong>{{ properties_count }} annonce(s)</strong> seront supprimées et ne seront plus visibles.</span>
+            </li>
+            {% endif %}
+            {% if has_bookings %}
+            <li>
+                <i class="fas fa-times-circle"></i>
+                <span>Vos <strong>{{ bookings_count }} réservation(s)</strong> seront annulées.</span>
+            </li>
+            {% endif %}
+            {% if has_reviews %}
+            <li>
+                <i class="fas fa-times-circle"></i>
+                <span>Vos <strong>{{ reviews_count }} avis</strong> seront supprimés.</span>
+            </li>
+            {% endif %}
+            {% if has_messages %}
+            <li>
+                <i class="fas fa-times-circle"></i>
+                <span>Vos <strong>{{ messages_count }} message(s)</strong> seront supprimés.</span>
+            </li>
+            {% endif %}
+            <li>
+                <i class="fas fa-times-circle"></i>
+                <span>Vous ne pourrez plus vous connecter avec ces identifiants.</span>
+            </li>
+            <li>
+                <i class="fas fa-info-circle" style="color: var(--orange);"></i>
+                <span>Cette action est <strong>irréversible</strong>.</span>
+            </li>
+        </ul>
+    </div>
+
+    <!-- ===== OPTIONS DE SUPPRESSION ===== -->
+    <div class="options-section">
+        <h3><i class="fas fa-cog"></i> Choisissez une option</h3>
+        
+        <form method="POST" id="delete-form">
+            {% csrf_token %}
+            
+            <div class="options-grid">
+                <!-- Option 1 : Désactivation -->
+                <label class="option-card" for="option-deactivate">
+                    <input type="radio" id="option-deactivate" name="delete_type" value="deactivate" checked>
+                    <div class="option-content">
+                        <div class="option-icon icon-warning">
+                            <i class="fas fa-pause-circle"></i>
+                        </div>
+                        <h4>Désactiver mon compte</h4>
+                        <p>Votre compte sera désactivé temporairement. Vos données seront conservées et vous pourrez contacter l'administrateur pour le réactiver.</p>
+                        <span class="option-badge recommended">Recommandé</span>
+                    </div>
+                </label>
+
+                <!-- Option 2 : Suppression définitive -->
+                <label class="option-card" for="option-delete">
+                    <input type="radio" id="option-delete" name="delete_type" value="delete">
+                    <div class="option-content">
+                        <div class="option-icon icon-danger">
+                            <i class="fas fa-trash-alt"></i>
+                        </div>
+                        <h4>Supprimer définitivement</h4>
+                        <p>Toutes vos données seront effacées de manière permanente. Cette action ne peut pas être annulée.</p>
+                        <span class="option-badge danger">Dangereux</span>
+                    </div>
+                </label>
+            </div>
+
+            <!-- ===== RAISON (optionnel) ===== -->
+            <div class="form-group">
+                <label for="reason">Pourquoi quittez-vous Habiora ? <span class="optional">(optionnel)</span></label>
+                <select id="reason" name="reason" class="form-control">
+                    <option value="">Sélectionnez une raison</option>
+                    <option value="Je n'ai plus besoin du service">Je n'ai plus besoin du service</option>
+                    <option value="Je n'ai pas trouvé ce que je cherchais">Je n'ai pas trouvé ce que je cherchais</option>
+                    <option value="L'application est trop compliquée">L'application est trop compliquée</option>
+                    <option value="J'ai trouvé un logement ailleurs">J'ai trouvé un logement ailleurs</option>
+                    <option value="Problèmes de confidentialité">Problèmes de confidentialité</option>
+                    <option value="Autre">Autre</option>
+                </select>
+                <span class="help-text">Votre avis nous aide à améliorer nos services</span>
+            </div>
+
+            <!-- ===== CONFIRMATION PAR MOT DE PASSE ===== -->
+            <div class="form-group">
+                <label for="password">Mot de passe <span class="required">*</span></label>
+                <div class="input-box">
+                    <span class="input-icon">
+                        <i class="fas fa-lock"></i>
+                    </span>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        class="form-control" 
+                        placeholder="Entrez votre mot de passe"
+                        required
+                    >
+                    <button type="button" class="show-password" onclick="togglePassword('password', this)">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+                <span class="help-text">Confirmez votre identité avec votre mot de passe</span>
+            </div>
+
+            <!-- ===== CONFIRMATION TEXTE ===== -->
+            <div class="form-group">
+                <label for="confirmation">Tapez <strong>"SUPPRIMER"</strong> pour confirmer <span class="required">*</span></label>
+                <div class="input-box">
+                    <span class="input-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </span>
+                    <input 
+                        type="text" 
+                        id="confirmation" 
+                        name="confirmation" 
+                        class="form-control" 
+                        placeholder="SUPPRIMER"
+                        required
+                        autocomplete="off"
+                    >
+                </div>
+                <span class="help-text">Cette étape est obligatoire pour éviter les suppressions accidentelles</span>
+            </div>
+
+            <!-- ===== BOUTONS D'ACTION ===== -->
+            <div class="form-actions">
+                <a href="{% url 'accounts:profile' %}" class="btn btn-outline">
+                    <i class="fas fa-arrow-left"></i> Annuler
+                </a>
+                <button type="submit" class="btn btn-danger" id="submit-btn" disabled>
+                    <i class="fas fa-trash"></i> 
+                    <span id="submit-text">Confirmer la suppression</span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- ===== ALTERNATIVE ===== -->
+    <div class="alternative-section">
+        <h3><i class="fas fa-lightbulb"></i> Alternatives à la suppression</h3>
+        <div class="alternative-grid">
+            <a href="{% url 'accounts:export_data' %}" class="alternative-card">
+                <div class="alternative-icon icon-blue">
+                    <i class="fas fa-download"></i>
+                </div>
+                <div>
+                    <h4>Exporter mes données</h4>
+                    <p>Téléchargez une copie de toutes vos données avant de partir.</p>
+                </div>
+            </a>
+            <a href="{% url 'accounts:edit_profile' %}" class="alternative-card">
+                <div class="alternative-icon icon-purple">
+                    <i class="fas fa-user-edit"></i>
+                </div>
+                <div>
+                    <h4>Modifier mon profil</h4>
+                    <p>Changez vos informations au lieu de supprimer votre compte.</p>
+                </div>
+            </a>
+            <a href="{% url 'accounts:change_password' %}" class="alternative-card">
+                <div class="alternative-icon icon-orange">
+                    <i class="fas fa-key"></i>
+                </div>
+                <div>
+                    <h4>Changer mon mot de passe</h4>
+                    <p>Sécurisez votre compte au lieu de le supprimer.</p>
+                </div>
+            </a>
+        </div>
+    </div>
+
+</div>
+
+<!-- ===== MODAL DE CONFIRMATION ===== -->
+<div class="modal-overlay" id="confirm-modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-icon">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <h2>Êtes-vous vraiment sûr ?</h2>
+        <p id="modal-message">
+            Cette action est irréversible. Toutes vos données seront définitivement perdues.
+        </p>
+        <div class="modal-actions">
+            <button type="button" class="btn btn-outline" onclick="closeModal()">
+                Annuler
+            </button>
+            <button type="button" class="btn btn-danger" onclick="submitForm()">
+                Oui, je confirme
+            </button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // ========================================
+    // VARIABLES
+    // ========================================
+    const form = document.getElementById('delete-form');
+    const passwordInput = document.getElementById('password');
+    const confirmationInput = document.getElementById('confirmation');
+    const submitBtn = document.getElementById('submit-btn');
+    const submitText = document.getElementById('submit-text');
+    const modal = document.getElementById('confirm-modal');
+    const modalMessage = document.getElementById('modal-message');
+    const deleteTypeRadios = document.querySelectorAll('input[name="delete_type"]');
+
+    // ========================================
+    // TOGGLE PASSWORD
+    // ========================================
+    function togglePassword(inputId, button) {
+        const input = document.getElementById(inputId);
+        const icon = button.querySelector('i');
+        
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    }
+
+    // ========================================
+    // VALIDATION EN TEMPS RÉEL
+    // ========================================
+    function validateForm() {
+        const password = passwordInput.value.trim();
+        const confirmation = confirmationInput.value.trim();
+        
+        const isValid = password.length > 0 && confirmation === 'SUPPRIMER';
+        
+        submitBtn.disabled = !isValid;
+        
+        return isValid;
+    }
+
+    passwordInput.addEventListener('input', validateForm);
+    confirmationInput.addEventListener('input', validateForm);
+
+    // ========================================
+    // CHANGEMENT DU TEXTE DU BOUTON
+    // ========================================
+    deleteTypeRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.value === 'delete') {
+                submitText.textContent = 'Supprimer définitivement';
+            } else {
+                submitText.textContent = 'Désactiver mon compte';
+            }
+        });
+    });
+
+    // ========================================
+    // SOUMISSION DU FORMULAIRE
+    // ========================================
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        if (!validateForm()) {
+            return;
+        }
+        
+        // Afficher le modal de confirmation
+        const deleteType = document.querySelector('input[name="delete_type"]:checked').value;
+        
+        if (deleteType === 'delete') {
+            modalMessage.innerHTML = `
+                <strong style="color: var(--red);">⚠️ Attention !</strong><br><br>
+                Vous êtes sur le point de <strong>supprimer définitivement</strong> votre compte.<br>
+                Toutes vos données seront perdues et ne pourront pas être récupérées.<br><br>
+                <strong>Cette action est irréversible.</strong>
+            `;
+        } else {
+            modalMessage.innerHTML = `
+                <strong>Désactivation du compte</strong><br><br>
+                Votre compte sera désactivé. Vos données seront conservées mais vous ne pourrez plus vous connecter.<br><br>
+                Vous pourrez contacter l'administrateur pour le réactiver.
+            `;
+        }
+        
+        modal.style.display = 'flex';
+    });
+
+    // ========================================
+    // FERMER LE MODAL
+    // ========================================
+    function closeModal() {
+        modal.style.display = 'none';
+    }
+
+    // ========================================
+    // SOUMETTRE LE FORMULAIRE
+    // ========================================
+    function submitForm() {
+        closeModal();
+        form.submit();
+    }
+
+    // Fermer le modal en cliquant sur l'overlay
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+
+    // Fermer avec la touche ESC
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modal.style.display === 'flex') {
+            closeModal();
+        }
+    });
+
+    // ========================================
+    // VÉRIFICATION DU MOT DE PASSE (AJAX)
+    // ========================================
+    passwordInput.addEventListener('blur', function() {
+        const password = this.value.trim();
+        
+        if (password.length === 0) {
+            return;
+        }
+        
+        // Envoyer une requête pour vérifier le mot de passe
+        fetch('{% url "accounts:delete_account_confirm" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCSRFToken(),
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ password: password })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success) {
+                passwordInput.style.borderColor = '#e74c3c';
+                showError(passwordInput, data.error);
+            } else {
+                passwordInput.style.borderColor = '';
+                removeError(passwordInput);
+            }
+        })
+        .catch(error => console.log('Erreur:', error));
+    });
+
+    // ========================================
+    // FONCTIONS UTILITAIRES
+    // ========================================
+    function showError(input, message) {
+        removeError(input);
+        
+        const error = document.createElement('div');
+        error.className = 'error-message';
+        error.style.cssText = 'color: #e74c3c; font-size: 12px; margin-top: 5px;';
+        error.textContent = message;
+        
+        input.parentElement.parentElement.appendChild(error);
+    }
+
+    function removeError(input) {
+        const formGroup = input.closest('.form-group');
+        const existingError = formGroup.querySelector('.error-message');
+        if (existingError) {
+            existingError.remove();
+        }
+    }
+
+    function getCSRFToken() {
+        const name = 'csrftoken';
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // ========================================
+    // INITIALISATION
+    // ========================================
+    validateForm();
+    
+    console.log('✅ Page de suppression chargée');
+</script>
+{% endblock %}

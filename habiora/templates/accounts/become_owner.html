@@ -1,0 +1,9 @@
+{% extends "accounts/base.html" %}
+{% block content %}
+<h1>Devenir propriétaire</h1>
+<p>En devenant propriétaire, vous pourrez publier et gérer vos annonces.</p>
+<form method="post">
+  {% csrf_token %}
+  <button type="submit">Confirmer</button>
+</form>
+{% endblock %}
